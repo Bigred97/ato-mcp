@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 2026-05-13
 
+### Added — `stats` MCP tool (7th tool)
+
+- New tool: `stats(dataset_id, measure, filters?)` returns summary
+  aggregates (count, sum, mean, median, min, max, stddev) for one measure
+  across all rows matching filters. Collapses the
+  "fetch-all-then-aggregate-locally" workflow into a single call —
+  response payload is tiny (8 numbers) even when the underlying dataset
+  has thousands of rows. Verified outputs:
+  - NSW postcode median income distribution: 587 postcodes, mean $55k,
+    range $17,887 — $92,216, stddev $11,493
+  - Disclosed corporate sector tax payable: 3,027 entities, total $96.1B,
+    mean $31.7M, median $4.5M
+  - HELP debt over 20 years: mean $63B, min $17B (2005-06), max $125B (2024-25)
+- Skips null values automatically, so blank-tax-payable entries don't
+  drag down the mean of `CORP_TRANSPARENCY`.
+- 11 new tests in `test_stats.py`.
+
 ### Added — `HELP_DEBT` curated dataset (11th dataset)
 
 - ATO HELP / HECS annual statistics (Table 1) — total outstanding debt,

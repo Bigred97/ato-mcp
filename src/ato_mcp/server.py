@@ -696,6 +696,115 @@ async def top_n(
 
 
 @mcp.tool
+async def stats(
+    dataset_id: Annotated[
+        str,
+        Field(
+            description="Curated dataset ID. Use search_datasets() / list_curated().",
+            examples=["IND_POSTCODE_MEDIAN", "CORP_TRANSPARENCY", "ATO_OCCUPATION"],
+        ),
+    ],
+    measure: Annotated[
+        str,
+        Field(
+            description=(
+                "The measure key to aggregate over. Use describe_dataset() "
+                "to see available measures."
+            ),
+            examples=["median_taxable_income_2022_23", "tax_payable", "total_income"],
+        ),
+    ],
+    filters: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Optional dimension filters — same shape as get_data.",
+            examples=[
+                {"state": "nsw"},
+                {"industry_broad": "C. Manufacturing"},
+                {"sex": "female"},
+            ],
+        ),
+    ] = None,
+) -> dict[str, Any]:
+    """Aggregate statistics (count, sum, mean, median, min, max, stddev) for
+    one measure across all rows matching filters.
+
+    Collapses the "fetch all rows then compute stats locally" workflow into
+    a single server-side call. The response payload is tiny (8 numbers) even
+    when the underlying dataset has thousands of rows.
+
+    Examples:
+        # Distribution of NSW postcode median incomes
+        stats("IND_POSTCODE_MEDIAN", "median_taxable_income_2022_23",
+              filters={"state": "nsw"})
+        # → {count: 587, mean: 61234, median: 58300, min: 17887,
+        #    max: 92216, sum: 35944558, stddev: 11432}
+
+        # How dispersed is corporate income across $100M+ entities?
+        stats("CORP_TRANSPARENCY", "total_income")
+        # → headline distribution of the $100M+ corporate sector
+
+    Returns:
+        Dict with: dataset_id, dataset_name, measure, unit, query echo,
+        and `statistics` containing count + summary stats (mean/median
+        rounded to integer for clean display; stddev kept as float).
+    """
+    if not isinstance(measure, str) or not measure.strip():
+        raise ValueError(
+            "measure is required and must be a non-empty string. "
+            "Use describe_dataset() to see available measure keys."
+        )
+    # Reuse the normal data path so all the filter/measure/dtype/validation
+    # work happens for free and the parsed-DataFrame cache is shared.
+    resp = await _get_data_impl(
+        dataset_id, filters, measure, None, None, "records", last_n=None,
+    )
+    values: list[float] = [
+        r.value
+        for r in resp.records
+        if isinstance(r, Observation) and r.value is not None
+    ]
+    if not values:
+        return {
+            "dataset_id": resp.dataset_id,
+            "dataset_name": resp.dataset_name,
+            "measure": measure,
+            "unit": resp.unit,
+            "query": resp.query,
+            "statistics": {"count": 0},
+            "source": resp.source,
+            "attribution": resp.attribution,
+            "ato_url": resp.ato_url,
+            "server_version": resp.server_version,
+        }
+    import statistics as _stats
+    n = len(values)
+    s_mean = sum(values) / n
+    s_var = sum((v - s_mean) ** 2 for v in values) / n if n > 1 else 0.0
+    s_stddev = s_var ** 0.5
+    return {
+        "dataset_id": resp.dataset_id,
+        "dataset_name": resp.dataset_name,
+        "measure": measure,
+        "unit": resp.unit,
+        "query": resp.query,
+        "statistics": {
+            "count": n,
+            "sum": round(sum(values), 2),
+            "mean": round(s_mean, 2),
+            "median": round(_stats.median(values), 2),
+            "min": round(min(values), 2),
+            "max": round(max(values), 2),
+            "stddev": round(s_stddev, 4),
+        },
+        "source": resp.source,
+        "attribution": resp.attribution,
+        "ato_url": resp.ato_url,
+        "server_version": resp.server_version,
+    }
+
+
+@mcp.tool
 def list_curated() -> list[str]:
     """List every curated dataset ID in this version of ato-mcp.
 

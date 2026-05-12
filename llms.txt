@@ -11,6 +11,7 @@ Six MCP tools — superset of the sister packages (top_n is ato-mcp specific):
 - get_data(dataset_id, filters?, measures?, start_period?, end_period?, format?) -> DataResponse
 - latest(dataset_id, filters?, measures?) -> DataResponse
 - top_n(dataset_id, measure, n=10, filters?, direction="top"|"bottom") -> DataResponse
+- stats(dataset_id, measure, filters?) -> dict (count/sum/mean/median/min/max/stddev)
 - list_curated() -> list[str]
 
 ## Curated datasets (v0.1)

@@ -58,7 +58,7 @@ Beyond the wheel-level `--upgrade`, the server has a second auto-update path **i
 
 ## What it exposes
 
-Six tools, all plain-English in, structured out:
+Seven tools, all plain-English in, structured out:
 
 | Tool                | Purpose                                                       |
 |---------------------|---------------------------------------------------------------|
@@ -67,6 +67,7 @@ Six tools, all plain-English in, structured out:
 | `get_data`          | Query with `filters`, `measures`, period range, output format |
 | `latest`            | Last observation per measure (shortcut)                       |
 | `top_n`             | Rank rows by a measure, return top (or bottom) N              |
+| `stats`             | Aggregate stats (count, sum, mean, median, min, max, stddev) over a measure |
 | `list_curated`      | Enumerate the curated dataset IDs                             |
 
 Every response is the same shape — `dataset_id`, `dataset_name`, `query`, `period`, `unit`, `row_count`, `records`, `ato_url`, `attribution`, `server_version` — across every curated dataset.
@@ -117,7 +118,7 @@ Same shape as the sister packages — `client → cache → parsing → shaping 
 - **`parsing.py`** reads XLSX (via `openpyxl`/`pandas`) and CSV (via `pandas`). Header rows + sheet names live in the curated YAML so future format quirks are a YAML edit, not a code change.
 - **`curated.py`** loads dataset specs from `data/curated/*.yaml` — each one declares its dimensions, measures, dimension value enums, source/download URLs, format, and parse layout.
 - **`shaping.py`** transforms the parsed DataFrame into `DataResponse` (records / series / csv).
-- **`server.py`** is the FastMCP entrypoint — six tools, full input validation with helpful "Try X" hints on error.
+- **`server.py`** is the FastMCP entrypoint — seven tools, full input validation with helpful "Try X" hints on error.
 
 Cache lives under `~/.ato-mcp/cache.db`. Data on data.gov.au refreshes once a year (ATO) or weekly (ACNC), and the TTLs are tuned for that.
 
