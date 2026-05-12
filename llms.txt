@@ -1,0 +1,81 @@
+# ato-mcp — MCP server for Australian Taxation Office statistics
+
+MCP (Model Context Protocol) server giving Claude and other LLM agents plain-English access to Australian Taxation Office and ACNC datasets via data.gov.au. Sister package to abs-mcp and rba-mcp.
+
+## What's exposed
+
+Five MCP tools — same surface as the sister packages:
+
+- search_datasets(query, limit=10) -> list[DatasetSummary]
+- describe_dataset(dataset_id) -> DatasetDetail
+- get_data(dataset_id, filters?, measures?, start_period?, end_period?, format?) -> DataResponse
+- latest(dataset_id, filters?, measures?) -> DataResponse
+- list_curated() -> list[str]
+
+## Curated datasets (v0.1)
+
+- IND_POSTCODE: Individuals tax stats by taxable status × state × SA4 × postcode (Taxation Statistics 2022-23, Table 6A). ~5,200 rows.
+- IND_POSTCODE_MEDIAN: Median and average taxable income by postcode, 2003-04 to 2022-23. ~2,300 postcodes × 21 yearly measures.
+- COMPANY_INDUSTRY: Company tax by ANZSIC broad + fine industry (Table 4A). 216 industry cells.
+- CORP_TRANSPARENCY: Entity-level tax disclosures for $100M+ corporations, 2023-24. ~4,200 entities. Fields: legal name, ABN, total income, taxable income, tax payable.
+- SUPER_CONTRIB_AGE: Super contributions by age × sex × taxable income bracket (Table 23A). 2022-23.
+- ACNC_REGISTER: Live ACNC charity register. ~60,000 entities × 69 fields. Updated weekly.
+
+## Filter shape
+
+All filters are plain-English keys. Values are matched after a small alias resolver, e.g. {"state": "nsw"} resolves to "NSW" before matching.
+
+Examples:
+- {"state": "nsw", "postcode": "2000"}
+- {"entity_name": "BHP IRON ORE (JIMBLEBAR) PTY LTD"}
+- {"industry_broad": "A. Agriculture, Forestry and Fishing"}
+- {"sex": "female", "age_range": "a. Under 18"}
+- {"state": "NSW", "charity_size": "Large"}
+
+## Response shape
+
+Every tool returns the same envelope:
+{
+  dataset_id: str,
+  dataset_name: str,
+  query: dict,             # echo of inputs for debugging
+  period: {start, end},
+  unit: str | null,        # set when all records share a unit (AUD, Persons, etc.)
+  row_count: int,
+  records: [Observation],  # or list of series dicts when format="series"
+  csv: str | null,         # set when format="csv"
+  source: "Australian Taxation Office",
+  attribution: "Data sourced from ... CC BY 3.0 AU",
+  retrieved_at: ISO datetime,
+  ato_url: str,            # canonical data.gov.au URL
+  server_version: str,
+}
+
+Observation:
+{ period, value, measure, dimensions: dict, unit }
+
+## When to call which tool
+
+- Don't know the dataset ID? search_datasets("postcode") first.
+- Want to know what filters/measures a dataset supports? describe_dataset(...).
+- Want a time series or filtered slice? get_data(...).
+- Want only the most recent row(s)? latest(...).
+- Want to enumerate everything available? list_curated().
+
+## Common errors and what they mean
+
+- "Unknown filter 'X' for dataset Y" — the filter key isn't a curated dimension. Call describe_dataset(Y) to see valid keys.
+- "Unknown value 'X' for filter 'state'" — the value isn't a valid alias. The error message lists valid options.
+- "Unknown measure 'X' for dataset Y" — not a curated measure. describe_dataset for the list.
+- "end_period before start_period" — period order is wrong; swap them.
+
+## Caching
+
+Server caches downloaded resources under ~/.ato-mcp/cache.db. TTLs:
+- "data" (ATO annual files): 7 days
+- "register" (ACNC weekly register): 24 hours
+- "catalog" (CKAN metadata): 1 hour
+
+## Attribution
+
+Every response carries a CC BY 3.0 AU attribution string per the data.gov.au licence. Cite ATO and (for charity data) ACNC as the source, and link back to ato_url.

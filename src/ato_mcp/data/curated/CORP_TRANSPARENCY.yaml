@@ -1,0 +1,67 @@
+id: CORP_TRANSPARENCY
+name: Corporate Tax Transparency 2023-24
+description: |
+  ATO Corporate Tax Transparency Report — entity-level tax disclosure for
+  every corporate tax entity with total income at or above the threshold
+  ($100M for public/foreign-owned or PRRT entities). ~4,200 entities for
+  2023-24. Columns: legal name, ABN, total income, taxable income, tax
+  payable, income year. The named-entity table that powers "how much tax
+  did X company pay?" agent queries.
+  Source: ATO, dataset on data.gov.au.
+period_coverage: 2023-24
+update_frequency: annual
+source_url: https://data.gov.au/data/dataset/corporate-transparency
+download_url: https://data.gov.au/data/dataset/c2524c87-cea4-4636-acac-599a82048a26/resource/491b366b-aa6f-4b1c-b39d-cebaeeb6f874/download/2023-24-corporate-report-of-entity-tax-information.xlsx
+discovery:
+  package_id: corporate-transparency
+  resource_name_pattern: '^\d{4}-\d{2} Report of Entity Tax Information$'
+format: xlsx
+sheet: Income tax details
+header_row: 1
+layout: wide
+cache_kind: data
+search_keywords:
+  - corporate tax transparency
+  - large company tax
+  - bhp tax
+  - rio tinto tax
+  - apple australia tax
+  - foreign owned tax
+  - entity tax payable
+  - corporate tax disclosure
+  - tax avoidance
+  - effective tax rate
+columns:
+  entity_name:
+    source_column: "Name"
+    description: Legal name of the corporate tax entity.
+    role: dimension
+    dtype: string
+  abn:
+    source_column: "ABN"
+    description: 11-digit Australian Business Number.
+    role: id
+    dtype: string
+  income_year:
+    source_column: "Income year"
+    description: Financial year of the disclosure.
+    role: dimension
+    dtype: string
+  total_income:
+    source_column: "Total income $"
+    description: Total income reported in the entity's tax return.
+    unit: AUD
+    role: measure
+    dtype: float
+  taxable_income:
+    source_column: "Taxable income $"
+    description: Taxable income after deductions and losses. Blank for some entities (offset or nil).
+    unit: AUD
+    role: measure
+    dtype: float
+  tax_payable:
+    source_column: "Tax payable $"
+    description: Tax payable reported in the entity's tax return. Blank for entities with nil tax payable.
+    unit: AUD
+    role: measure
+    dtype: float

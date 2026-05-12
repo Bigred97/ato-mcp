@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+dist/
+build/
+.coverage
+.coverage.*
+htmlcov/
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+.ato-mcp-cache/

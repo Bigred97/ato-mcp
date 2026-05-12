@@ -1,0 +1,166 @@
+id: ACNC_REGISTER
+name: ACNC Register of Australian Charities
+description: |
+  Live register of all charities registered with the Australian Charities and
+  Not-for-profits Commission. ~60,000 entities × 69 columns including legal
+  name, ABN, address, charity size, beneficiary groups, and operating
+  jurisdictions. Updated weekly. The nonprofit-tech entry point — for
+  agents that answer "find me charities in NSW with size = Large".
+  Source: ACNC via data.gov.au.
+period_coverage: current (weekly snapshot)
+update_frequency: weekly
+source_url: https://data.gov.au/data/dataset/acnc-register
+download_url: https://data.gov.au/data/dataset/b050b242-4487-4306-abf5-07ca073e5594/resource/8fb32972-24e9-4c95-885e-7140be51be8a/download/datadotgov_main.csv
+discovery:
+  package_id: acnc-register
+  resource_name: ACNC Register of Australian charities CSV
+format: csv
+header_row: 1
+layout: wide
+cache_kind: register
+search_keywords:
+  - charity register
+  - acnc
+  - not for profit
+  - nonprofit
+  - charities in australia
+  - charity by state
+  - charity size
+  - registered charities
+  - public benevolent institution
+  - pbi
+columns:
+  abn:
+    source_column: "ABN"
+    description: 11-digit Australian Business Number.
+    role: id
+    dtype: string
+  charity_name:
+    source_column: "Charity_Legal_Name"
+    description: Legal name of the registered charity.
+    role: dimension
+    dtype: string
+  other_names:
+    source_column: "Other_Organisation_Names"
+    description: Other trading or operating names used by the charity.
+    role: dimension
+    dtype: string
+  town_city:
+    source_column: "Town_City"
+    description: Town or city of the charity's primary registered address.
+    role: dimension
+    dtype: string
+  state:
+    source_column: "State"
+    description: State or territory of the charity's primary registered address.
+    role: dimension
+    dtype: string
+  postcode:
+    source_column: "Postcode"
+    description: Postcode of the charity's primary registered address.
+    role: dimension
+    dtype: string
+  country:
+    source_column: "Country"
+    description: Country of the charity's primary registered address.
+    role: dimension
+    dtype: string
+  website:
+    source_column: "Charity_Website"
+    description: Charity website (when provided).
+    role: dimension
+    dtype: string
+  registration_date:
+    source_column: "Registration_Date"
+    description: Date the charity was registered with the ACNC.
+    role: dimension
+    dtype: string
+  charity_size:
+    source_column: "Charity_Size"
+    description: ACNC charity size classification ('Small', 'Medium', 'Large', 'Extra Large') based on revenue.
+    role: dimension
+    dtype: string
+  responsible_persons_count:
+    source_column: "Number_of_Responsible_Persons"
+    description: Number of board members / responsible persons.
+    unit: Persons
+    role: measure
+    dtype: int
+  financial_year_end:
+    source_column: "Financial_Year_End"
+    description: Charity's nominated financial year end date (DD/MM format).
+    role: dimension
+    dtype: string
+  is_pbi:
+    source_column: "PBI"
+    description: Public Benevolent Institution flag.
+    role: dimension
+    dtype: string
+  is_hpc:
+    source_column: "HPC"
+    description: Health Promotion Charity flag.
+    role: dimension
+    dtype: string
+  operates_in_act:
+    source_column: "Operates_in_ACT"
+    description: Flag — charity operates in the ACT.
+    role: dimension
+    dtype: string
+  operates_in_nsw:
+    source_column: "Operates_in_NSW"
+    description: Flag — charity operates in NSW.
+    role: dimension
+    dtype: string
+  operates_in_nt:
+    source_column: "Operates_in_NT"
+    description: Flag — charity operates in NT.
+    role: dimension
+    dtype: string
+  operates_in_qld:
+    source_column: "Operates_in_QLD"
+    description: Flag — charity operates in QLD.
+    role: dimension
+    dtype: string
+  operates_in_sa:
+    source_column: "Operates_in_SA"
+    description: Flag — charity operates in SA.
+    role: dimension
+    dtype: string
+  operates_in_tas:
+    source_column: "Operates_in_TAS"
+    description: Flag — charity operates in TAS.
+    role: dimension
+    dtype: string
+  operates_in_vic:
+    source_column: "Operates_in_VIC"
+    description: Flag — charity operates in VIC.
+    role: dimension
+    dtype: string
+  operates_in_wa:
+    source_column: "Operates_in_WA"
+    description: Flag — charity operates in WA.
+    role: dimension
+    dtype: string
+dimension_values:
+  charity_size:
+    small: Small
+    medium: Medium
+    large: Large
+    extra_large: Extra Large
+  state:
+    NSW: NSW
+    VIC: VIC
+    QLD: QLD
+    SA: SA
+    WA: WA
+    TAS: TAS
+    NT: NT
+    ACT: ACT
+    nsw: NSW
+    vic: VIC
+    qld: QLD
+    sa: SA
+    wa: WA
+    tas: TAS
+    nt: NT
+    act: ACT

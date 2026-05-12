@@ -1,0 +1,105 @@
+id: IND_POSTCODE
+name: Individuals by Postcode (Tax Statistics 2022-23)
+description: |
+  ATO Taxation Statistics Table 6A — selected items for individuals, by
+  taxable status, state/territory, SA4 region, and postcode for the
+  2022-23 income year. The property-tech goldmine: ~5,200 postcodes ×
+  taxable-vs-non-taxable × ~80 measures including taxable income, salary
+  and wages, tax payable, Medicare levy, and total deductions.
+  Source: ATO Taxation Statistics, dataset on data.gov.au.
+period_coverage: 2022-23
+update_frequency: annual
+source_url: https://data.gov.au/data/dataset/taxation-statistics-2022-23
+download_url: https://data.gov.au/data/dataset/03326c3f-c0d3-4af4-afc7-c6ccc0a02223/resource/9ab2e787-6447-468f-9d83-c6294d4ec919/download/ts23individual06taxablestatusstatesa4postcode.xlsx
+discovery:
+  organization_id: australiantaxationoffice
+  package_id_pattern: '^taxation-statistics-(\d{4})-\d{2}$'
+  resource_name: Individuals - Table 6
+format: xlsx
+sheet: Table 6A
+header_row: 2
+layout: wide
+cache_kind: data
+search_keywords:
+  - postcode
+  - individual tax
+  - personal tax
+  - taxable income by postcode
+  - state tax stats
+  - sa4
+  - suburb tax
+  - property tech
+  - residential
+  - taxable status
+  - non taxable
+columns:
+  taxable_status:
+    source_column: "Taxable status"
+    description: "'Taxable' = lodged a tax return with positive tax liability; 'Non Taxable' = lodged but no tax liability."
+    role: dimension
+    dtype: string
+  state:
+    source_column: "State/ Territory1"
+    description: Two-letter state/territory code from the taxpayer's address.
+    role: dimension
+    dtype: string
+  sa4:
+    source_column: "Statistical Area Level 4 (SA4)2"
+    description: ABS Statistical Area Level 4 region name.
+    role: dimension
+    dtype: string
+  postcode:
+    source_column: "Postcode"
+    description: Australian postcode (4-digit).
+    role: dimension
+    dtype: string
+  individuals_count:
+    source_column: "Individuals\nno."
+    description: Number of individuals in this postcode + taxable-status cell.
+    unit: Persons
+    role: measure
+    dtype: int
+  taxable_income_count:
+    source_column: "Taxable income or loss4\nno."
+    description: Count of individuals with non-null taxable income or loss.
+    unit: Persons
+    role: measure
+    dtype: int
+  taxable_income_total:
+    source_column: "Taxable income or loss4\n$"
+    description: Total taxable income (or loss) summed across all individuals in the cell.
+    unit: AUD
+    role: measure
+    dtype: float
+  tax_payable_count:
+    source_column: "Tax on taxable income\nno."
+    description: Count of individuals with non-zero tax on taxable income.
+    unit: Persons
+    role: measure
+    dtype: int
+  tax_payable_total:
+    source_column: "Tax on taxable income\n$"
+    description: Total tax on taxable income summed across individuals in the cell.
+    unit: AUD
+    role: measure
+    dtype: float
+  medicare_levy_count:
+    source_column: "Medicare levy\nno."
+    description: Count of individuals with Medicare levy.
+    unit: Persons
+    role: measure
+    dtype: int
+dimension_values:
+  taxable_status:
+    taxable: Taxable
+    non_taxable: Non Taxable
+  state:
+    nsw: NSW
+    vic: VIC
+    qld: QLD
+    sa: SA
+    wa: WA
+    tas: TAS
+    nt: NT
+    act: ACT
+    other: Other

@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ato-mcp"
+version = "0.1.0"
+description = "MCP server for Australian Taxation Office statistics. Plain-English access to personal tax by postcode, company tax by industry, corporate tax transparency, GST collections, super contributions, and the ACNC charity register."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Harry Vass" }]
+keywords = ["mcp", "ato", "australia", "taxation", "tax-statistics", "acnc", "claude", "fastmcp", "property-tech", "fintech"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Office/Business :: Financial",
+]
+dependencies = [
+    "fastmcp>=2.0,<4",
+    "httpx>=0.27",
+    "pydantic>=2.7",
+    "rapidfuzz>=3.9",
+    "pandas>=2.2,<3",
+    "openpyxl>=3.1",
+    "aiosqlite>=0.20",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "respx>=0.21",
+]
+
+[project.scripts]
+ato-mcp = "ato_mcp.server:main"
+
+[project.urls]
+Homepage = "https://github.com/Bigred97/ato-mcp"
+Issues = "https://github.com/Bigred97/ato-mcp/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ato_mcp"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = ["live: hits real data.gov.au (downloads ATO XLSX/CSV files)"]
+addopts = "-m 'not live'"
+testpaths = ["tests"]
+pythonpath = ["src"]

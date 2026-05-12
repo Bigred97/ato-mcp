@@ -1,0 +1,90 @@
+id: COMPANY_INDUSTRY
+name: Company Tax by Industry (Tax Statistics 2022-23)
+description: |
+  ATO Taxation Statistics Company Table 4A — selected items for companies,
+  by broad and fine industry classification (ANZSIC). 216 industry cells
+  covering company count, gross income components (sales, distributions,
+  rent, dividends), and total income for 2022-23.
+  Source: ATO Taxation Statistics, dataset on data.gov.au.
+period_coverage: 2022-23
+update_frequency: annual
+source_url: https://data.gov.au/data/dataset/taxation-statistics-2022-23
+download_url: https://data.gov.au/data/dataset/03326c3f-c0d3-4af4-afc7-c6ccc0a02223/resource/9c343469-7fa4-450c-8e96-b7fcee2eaad8/download/ts23company04industry.xlsx
+discovery:
+  organization_id: australiantaxationoffice
+  package_id_pattern: '^taxation-statistics-(\d{4})-\d{2}$'
+  resource_name: Company - Table 4
+format: xlsx
+sheet: Table 4A
+header_row: 3
+layout: wide
+cache_kind: data
+search_keywords:
+  - company tax
+  - corporate tax by industry
+  - anzsic
+  - business income
+  - industry tax stats
+  - sector tax
+  - fintech
+  - b2b
+  - industry benchmark
+columns:
+  industry_broad:
+    source_column: "Broad industry2"
+    description: ANZSIC broad industry class (e.g. "A. Agriculture, Forestry and Fishing").
+    role: dimension
+    dtype: string
+  industry_fine:
+    source_column: "Fine industry2"
+    description: ANZSIC fine industry class (3-digit code + name).
+    role: dimension
+    dtype: string
+  companies_count:
+    source_column: "Companies\nno."
+    description: Number of companies in this industry cell.
+    unit: Companies
+    role: measure
+    dtype: int
+  other_sales_total:
+    source_column: "Other sales of goods and services\n$"
+    description: Total revenue from other sales of goods and services.
+    unit: AUD
+    role: measure
+    dtype: float
+  partnership_dist_total:
+    source_column: "Gross distribution from partnerships\n$"
+    description: Gross distributions received from partnerships.
+    unit: AUD
+    role: measure
+    dtype: float
+  trust_dist_total:
+    source_column: "Gross distribution from trusts\n$"
+    description: Gross distributions received from trusts.
+    unit: AUD
+    role: measure
+    dtype: float
+  gross_interest_total:
+    source_column: "Gross interest\n$"
+    description: Total gross interest received.
+    unit: AUD
+    role: measure
+    dtype: float
+  gross_rent_total:
+    source_column: "Gross rent and other leasing and hiring income\n$"
+    description: Total gross rent and leasing income.
+    unit: AUD
+    role: measure
+    dtype: float
+  dividends_total:
+    source_column: "Total dividends\n$"
+    description: Total dividends received.
+    unit: AUD
+    role: measure
+    dtype: float
+  total_income:
+    source_column: "Total income3\n$"
+    description: Total business income for the industry segment.
+    unit: AUD
+    role: measure
+    dtype: float

@@ -1,0 +1,92 @@
+id: SUPER_CONTRIB_AGE
+name: Superannuation Contributions by Age, Sex, and Taxable Income (Tax Stats 2022-23)
+description: |
+  ATO Taxation Statistics Individuals Table 23A — superannuation contributions
+  reported on individual returns, broken down by age range, sex, and taxable
+  income bracket. Covers employer contributions, personal (after-tax)
+  contributions, and "other" contributions for 2022-23.
+  Source: ATO Taxation Statistics, dataset on data.gov.au.
+period_coverage: 2022-23
+update_frequency: annual
+source_url: https://data.gov.au/data/dataset/taxation-statistics-2022-23
+download_url: https://data.gov.au/data/dataset/03326c3f-c0d3-4af4-afc7-c6ccc0a02223/resource/0bec4bc1-79f5-4c56-94ba-7f250b360256/download/ts23individual23contributionsbyagesextaxableincome.xlsx
+discovery:
+  organization_id: australiantaxationoffice
+  package_id_pattern: '^taxation-statistics-(\d{4})-\d{2}$'
+  resource_name: Individuals - Table 23
+format: xlsx
+sheet: Table 23A
+header_row: 2
+layout: wide
+cache_kind: data
+search_keywords:
+  - super contributions
+  - superannuation
+  - retirement savings
+  - by age
+  - employer contributions
+  - personal contributions
+  - super by age sex
+  - retirement
+columns:
+  age_range:
+    source_column: "Age range6"
+    description: Age bracket of the individual making the contribution.
+    role: dimension
+    dtype: string
+  sex:
+    source_column: "Sex"
+    description: Sex of the individual.
+    role: dimension
+    dtype: string
+  taxable_income_range:
+    source_column: "Taxable income range - tax brackets"
+    description: Taxable income bracket (matches the tax brackets in force for 2022-23).
+    role: dimension
+    dtype: string
+  individuals_count:
+    source_column: "Individuals4,5\nno."
+    description: Number of individuals in this age × sex × income cell.
+    unit: Persons
+    role: measure
+    dtype: int
+  employer_contrib_count:
+    source_column: "Employer contributions\nno."
+    description: Count of individuals with employer super contributions.
+    unit: Persons
+    role: measure
+    dtype: int
+  employer_contrib_total:
+    source_column: "Employer contributions\n$"
+    description: Total employer super contributions (sum across individuals in cell).
+    unit: AUD
+    role: measure
+    dtype: float
+  personal_contrib_count:
+    source_column: "Personal contributions\nno."
+    description: Count of individuals with personal (after-tax) super contributions.
+    unit: Persons
+    role: measure
+    dtype: int
+  personal_contrib_total:
+    source_column: "Personal contributions\n$"
+    description: Total personal super contributions.
+    unit: AUD
+    role: measure
+    dtype: float
+  other_contrib_count:
+    source_column: "Other contributions\nno."
+    description: Count of individuals with other super contributions (e.g. spouse, government co-contribution).
+    unit: Persons
+    role: measure
+    dtype: int
+  other_contrib_total:
+    source_column: "Other contributions\n$"
+    description: Total "other" super contributions.
+    unit: AUD
+    role: measure
+    dtype: float
+dimension_values:
+  sex:
+    male: Male
+    female: Female
