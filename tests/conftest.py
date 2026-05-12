@@ -60,3 +60,9 @@ def acnc_register_csv() -> bytes:
 def gst_monthly_xlsx() -> bytes:
     """GST/WET/LCT monthly collections — transposed-layout fixture."""
     return (FIXTURE_DIR / "gst_monthly.xlsx").read_bytes()
+
+
+@pytest.fixture
+def ato_occupation_xlsx() -> bytes:
+    """Individuals by occupation × sex — ANZSCO 6-digit roles."""
+    return (FIXTURE_DIR / "ato_occupation.xlsx").read_bytes()

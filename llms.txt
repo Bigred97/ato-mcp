@@ -21,6 +21,8 @@ Six MCP tools — superset of the sister packages (top_n is ato-mcp specific):
 - CORP_TRANSPARENCY: Entity-level tax disclosures for $100M+ corporations, 2023-24. ~4,200 entities. Fields: legal name, ABN, total income, taxable income, tax payable.
 - SUPER_CONTRIB_AGE: Super contributions by age × sex × taxable income bracket (Table 23A). 2022-23.
 - ACNC_REGISTER: Live ACNC charity register. ~60,000 entities × 69 fields. Updated weekly.
+- GST_MONTHLY: Monthly GST / WET / LCT collections (Table 1B). 10 metrics × 48 months from 2020-07 to 2024-06. Transposed time-series layout.
+- ATO_OCCUPATION: Individuals income (median / average; taxable / salary-wage / total) by ANZSCO 6-digit occupation × sex (Table 15A). ~1,200 jobs × 3 sex categories. 2022-23.
 
 ## Filter shape
 

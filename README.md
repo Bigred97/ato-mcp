@@ -67,7 +67,7 @@ Every response is the same shape — `dataset_id`, `dataset_name`, `query`, `per
 
 ---
 
-## Curated datasets (7 in v0.1)
+## Curated datasets (8 in v0.1)
 
 | ID                    | What it is                                                                          | Period             | Coverage                  |
 |-----------------------|-------------------------------------------------------------------------------------|--------------------|---------------------------|
@@ -78,6 +78,7 @@ Every response is the same shape — `dataset_id`, `dataset_name`, `query`, `per
 | `SUPER_CONTRIB_AGE`   | Super contributions by age × sex × taxable income bracket                            | 2022-23            | Employer/personal/other   |
 | `ACNC_REGISTER`       | Live register of every Australian charity (ABN, size, jurisdiction, beneficiaries)   | Current (weekly)   | ~60,000 entities          |
 | `GST_MONTHLY`         | Monthly GST / WET / LCT collections (gross GST, input tax credits, net GST, etc.)   | 2020-07 → 2024-06  | 10 metrics × 48 months    |
+| `ATO_OCCUPATION`      | Median/average income (taxable, salary/wage, total) by ANZSCO occupation × sex      | 2022-23            | ~1,200 jobs × 7 measures  |
 
 Adding a new dataset is a single YAML drop into `src/ato_mcp/data/curated/` — see [CONTRIBUTING.md](CONTRIBUTING.md).
 

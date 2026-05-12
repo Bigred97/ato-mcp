@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 2026-05-12
 
+### Added — `ATO_OCCUPATION` curated dataset (8th dataset)
+
+- Individuals Table 15A — median and average taxable / salary-wage / total
+  income by ANZSCO 6-digit occupation × sex. ~1,200 occupations × 3 sex
+  categories. The "which jobs pay the most" answer in one call. Real
+  numbers verified: median taxable income for medical specialists tops out
+  at Otorhinolaryngologist $516k, Neurosurgeon $486k, Plastic Surgeon
+  $459k; top non-medical role is Judge — Law at $438k.
+- Pairs naturally with `top_n` for HR-tech / career-planning agents:
+  `top_n("ATO_OCCUPATION", "median_taxable_income", filters={"sex": "total"})`
+- 7 new tests in `test_occupation.py` including a CEO median sanity-check
+  and a top-10-medical-specialists assertion.
+
 ### Added — `top_n` MCP tool (6th tool)
 
 - **`top_n(dataset_id, measure, n=10, filters=None, direction="top")`** —

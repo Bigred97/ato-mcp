@@ -1,0 +1,98 @@
+id: ATO_OCCUPATION
+name: Individuals by Occupation and Sex (Tax Stats 2022-23)
+description: |
+  ATO Taxation Statistics Individuals Table 15A — average and median taxable
+  income, salary or wage income, and total income by ANZSCO occupation
+  unit-group (6-digit code) and sex for 2022-23. ~1,200 occupations,
+  each with female / male / total rows. The fastest answer to "which jobs
+  pay the most tax?" or "what's the median CEO salary in Australia?".
+  Source: ATO Taxation Statistics, dataset on data.gov.au.
+period_coverage: 2022-23
+update_frequency: annual
+source_url: https://data.gov.au/data/dataset/taxation-statistics-2022-23
+download_url: https://data.gov.au/data/dataset/03326c3f-c0d3-4af4-afc7-c6ccc0a02223/resource/bc151e9e-8475-4d22-a0c4-c0f88242850e/download/ts23individual15occupationsex.xlsx
+format: xlsx
+sheet: Table 15A
+header_row: 2
+layout: wide
+cache_kind: data
+search_keywords:
+  - occupation
+  - job pay
+  - salary by occupation
+  - anzsco
+  - median income by job
+  - top earning jobs
+  - which jobs pay the most
+  - ceo pay
+  - surgeon salary
+  - fintech
+  - hr tech
+  - career income
+discovery:
+  organization_id: australiantaxationoffice
+  package_id_pattern: '^taxation-statistics-(\d{4})-\d{2}$'
+  resource_name: Individuals - Table 15
+columns:
+  occupation_group:
+    source_column: "Occupation - unit group1"
+    description: 4-digit ANZSCO occupation unit group (e.g. "1111 Chief executive officer or managing director").
+    role: dimension
+    dtype: string
+  occupation:
+    source_column: "Occupation1"
+    description: 6-digit ANZSCO occupation (e.g. "111111 Chief executive officer").
+    role: dimension
+    dtype: string
+  sex:
+    source_column: "Sex4"
+    description: "'Female', 'Male', or 'Total' (union of both)."
+    role: dimension
+    dtype: string
+  individuals_count:
+    source_column: "Individuals\nno."
+    description: Number of individuals in this occupation × sex cell.
+    unit: Persons
+    role: measure
+    dtype: int
+  average_taxable_income:
+    source_column: "Average taxable income2,5\n$"
+    description: Mean taxable income across individuals in this occupation × sex.
+    unit: AUD
+    role: measure
+    dtype: float
+  median_taxable_income:
+    source_column: "Median taxable income2,5\n$"
+    description: Median taxable income across individuals in this occupation × sex.
+    unit: AUD
+    role: measure
+    dtype: float
+  average_salary_wage:
+    source_column: "Average salary or wage income5\n$"
+    description: Mean salary or wage income (excludes investment / business income).
+    unit: AUD
+    role: measure
+    dtype: float
+  median_salary_wage:
+    source_column: "Median salary or wage income5\n$"
+    description: Median salary or wage income.
+    unit: AUD
+    role: measure
+    dtype: float
+  average_total_income:
+    source_column: "Average total income2,5\n$"
+    description: Mean total income (taxable + non-taxable components reported on the return).
+    unit: AUD
+    role: measure
+    dtype: float
+  median_total_income:
+    source_column: "Median total income2,5\n$"
+    description: Median total income.
+    unit: AUD
+    role: measure
+    dtype: float
+dimension_values:
+  sex:
+    female: Female
+    male: Male
+    total: Total

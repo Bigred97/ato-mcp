@@ -58,6 +58,18 @@ All values below were verified live against `data.gov.au` on 2026-05-12. If your
 
 ---
 
+## 5b. HR-tech / career-planning — top-earning jobs
+
+> Use the ATO occupation data to find the top 10 highest-paid occupations in Australia by median taxable income in 2022-23. Show me the occupation, the median, and how many people work in each.
+
+**Expected**: Otorhinolaryngologist $516k, Neurosurgeon $486k, Plastic Surgeon $459k, Ophthalmologist $458k, Urologist $450k, Cardiologist $449k, Judge $438k, Anaesthetist $425k. Tool: `ato:top_n("ATO_OCCUPATION", "median_taxable_income", n=10, filters={"sex": "total"})`.
+
+## 5c. Gender pay gap by occupation
+
+> What's the median taxable-income gap between female and male software programmers in Australia? Pull both rows from the ATO occupation dataset and compute the percentage difference.
+
+**Expected**: Software-programmer males earn more than females (typical ~10-25% gap nationwide). Tool: `ato:get_data("ATO_OCCUPATION", filters={"occupation": "261313 Software engineer"})`.
+
 ## 6. Retirement-tech — super contributions slice
 
 > For Australian females aged 30 to 39 earning between $120,001 and $180,000, what was the average employer super contribution per person in 2022-23? Pull the totals and the headcount and do the division.
