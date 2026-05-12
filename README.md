@@ -10,7 +10,7 @@
 "What's the average super contribution for under-30s in the top tax bracket?"
 ```
 
-Sister to [abs-mcp](https://github.com/Bigred97/abs-mcp) (Australian Bureau of Statistics) and [rba-mcp](https://github.com/Bigred97/rba-mcp) (Reserve Bank of Australia). The three together cover the macro / regulator / tax layer of Australian official data.
+Sister to [abs-mcp](https://github.com/Bigred97/abs-mcp) (Australian Bureau of Statistics), [rba-mcp](https://github.com/Bigred97/rba-mcp) (Reserve Bank of Australia), and [au-weather-mcp](https://github.com/Bigred97/au-weather-mcp) (Australian weather via Open-Meteo + BOM). The four together cover the macro / regulator / tax / climate layer of Australian official data.
 
 ---
 
@@ -60,6 +60,7 @@ Five tools, all plain-English in, structured out:
 | `describe_dataset`  | List a dataset's filterable dimensions and returnable measures |
 | `get_data`          | Query with `filters`, `measures`, period range, output format |
 | `latest`            | Last observation per measure (shortcut)                       |
+| `top_n`             | Rank rows by a measure, return top (or bottom) N              |
 | `list_curated`      | Enumerate the curated dataset IDs                             |
 
 Every response is the same shape — `dataset_id`, `dataset_name`, `query`, `period`, `unit`, `row_count`, `records`, `ato_url`, `attribution`, `server_version` — across all six datasets.
@@ -123,8 +124,9 @@ Data sourced from the Australian Taxation Office and the Australian Charities an
 - [abs-mcp](https://github.com/Bigred97/abs-mcp) — ABS census and economic statistics (unemployment, CPI, GDP, population, building approvals)
 - [rba-mcp](https://github.com/Bigred97/rba-mcp) — RBA statistical tables (cash rate, FX rates, mortgage rates, money market)
 - **ato-mcp** — this one. Tax, super, and charity registers.
+- [au-weather-mcp](https://github.com/Bigred97/au-weather-mcp) — Australian weather via Open-Meteo + BOM. 21 curated locations + postcode/place-name lookup, current observations, 16-day forecasts, 80yr historical archive.
 
-All three are designed to compose: an agent can ask for "unemployment + cash rate + median income" in postcode 2000 and one shot fans out across three MCPs.
+All four are designed to compose: an agent can ask for "unemployment + cash rate + median income + climate" in postcode 2000 and one shot fans out across four MCPs.
 
 ---
 
