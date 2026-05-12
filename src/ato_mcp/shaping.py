@@ -449,13 +449,21 @@ def build_response(
         records = shape_transposed(filtered, cd, measure_keys, start_period, end_period)
 
     if last_n is not None and last_n > 0 and records:
-        # last_n per measure — group by measure, keep tail
+        # last_n per measure — keep the MOST RECENT N observations per measure.
+        # Sort by normalised period ascending first, so `tail` always selects
+        # the freshest values regardless of source-file row order (the SMSF
+        # overview lists years descending; the GST monthly table lists them
+        # ascending — both need to land on "newest" when last_n=1).
         per_measure: dict[str, list[Observation]] = {}
         for r in records:
             per_measure.setdefault(r.measure or "", []).append(r)
         records = []
-        for k in per_measure:
-            records.extend(per_measure[k][-last_n:])
+        for k, group in per_measure.items():
+            group_sorted = sorted(
+                group,
+                key=lambda r: _normalize_period(r.period or "") or "",
+            )
+            records.extend(group_sorted[-last_n:])
 
     response_unit: str | None = None
     if records:

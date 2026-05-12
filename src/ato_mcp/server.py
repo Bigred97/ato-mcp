@@ -228,6 +228,7 @@ async def _fetch_and_parse(cd: curated.CuratedDataset, *, kind: str = "data"):
             sheet=cd.sheet,
             header_row=cd.header_row,
             data_start_row=cd.data_start_row,
+            max_rows=cd.max_rows,
         )
     # Trim trailing blank rows where every dimension is NaN.
     dim_source_cols = [c.source_column for c in cd.columns.values() if c.role == "dimension"]

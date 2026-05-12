@@ -34,7 +34,12 @@ def test_every_curated_dataset_has_required_fields():
         # column (transposed layout). We check both paths.
         roles = {c.role for c in cd.columns.values()}
         if cd.layout == "transposed":
-            assert cd.metric_label_column, f"transposed {cd.id} needs metric_label_column"
+            # metric_label_column can be empty string (some ATO files have
+            # a blank cell in column A's header). Only require it to be
+            # declared, not non-empty.
+            assert cd.metric_label_column is not None, (
+                f"transposed {cd.id} needs metric_label_column"
+            )
             aliases = curated.transposed_measure_aliases(cd)
             assert aliases, (
                 f"transposed {cd.id} declares no measures — needs dimension_values "

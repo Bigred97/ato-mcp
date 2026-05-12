@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 2026-05-12
 
+### Added — `SMSF_FUNDS` curated dataset (9th dataset)
+
+- ATO SMSF Annual Overview Table 1 sub-table 2 — total SMSFs, total
+  members, total gross assets over the last 6 financial years (2019-20
+  to 2024-25). The "how big is the SMSF sector?" answer in one call:
+  653,062 funds, 1.2M members, $1.05 trillion in assets at 30 June 2025.
+- Auto-discovery wired (resolves to the latest "SMSF Annual Overview
+  YYYY-YY" resource on data.gov.au at fetch time).
+
+### Schema extension — `max_rows`
+
+- Curated YAMLs can now declare `max_rows: N` to carve a sub-table out
+  of a multi-section sheet. Needed for SMSF Annual Overview where each
+  sheet stacks 4-6 sub-tables vertically (narrative → key highlights →
+  data → next sub-title → data → ...). Other datasets unaffected.
+
+### Bug fix — `latest` direction
+
+- `last_n=1` on transposed datasets used to return the OLDEST period
+  when the source file lists years descending (SMSF's case). Now
+  `shape_transposed` sorts by normalised period ascending before
+  tailing — so `latest("SMSF_FUNDS", measures="total_smsfs")` correctly
+  returns 2024-25's 653,062 funds, not 2019-20's 566,871.
+
+### Added — repo polish
+
+- GitHub Actions workflows: `tests` (Python 3.11/3.12/3.13 matrix + wheel
+  install verify) and `codeql` (weekly SAST). Both green on first run.
+- README badges: tests, PyPI, Python versions, license, Glama.
+- Issue templates, PR template, dependabot. Same shape as sister repos.
+- Dependency bumps merged via dependabot: setup-uv v3→v7,
+  actions/checkout v4→v6, codeql-action v3→v4.
+
 ### Added — `ATO_OCCUPATION` curated dataset (8th dataset)
 
 - Individuals Table 15A — median and average taxable / salary-wage / total

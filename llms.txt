@@ -23,6 +23,7 @@ Six MCP tools — superset of the sister packages (top_n is ato-mcp specific):
 - ACNC_REGISTER: Live ACNC charity register. ~60,000 entities × 69 fields. Updated weekly.
 - GST_MONTHLY: Monthly GST / WET / LCT collections (Table 1B). 10 metrics × 48 months from 2020-07 to 2024-06. Transposed time-series layout.
 - ATO_OCCUPATION: Individuals income (median / average; taxable / salary-wage / total) by ANZSCO 6-digit occupation × sex (Table 15A). ~1,200 jobs × 3 sex categories. 2022-23.
+- SMSF_FUNDS: Self-managed super fund sector size — total funds, total members, total gross assets (millions AUD) by financial year. 2019-20 to 2024-25 (6 years × 3 metrics). Transposed-layout.
 
 ## Filter shape
 

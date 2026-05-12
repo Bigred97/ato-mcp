@@ -58,6 +58,7 @@ class CuratedDataset:
     sheet: str | None                        # XLSX sheet name; None for CSV
     header_row: int                          # 1-indexed
     data_start_row: int | None               # optional override (defaults to header_row + 1)
+    max_rows: int | None                     # cap on data rows read — used to carve out a sub-table from a multi-section sheet (SMSF Annual Overview)
     layout: Layout                           # "wide" = entities-as-rows; "transposed" = years-as-cols
     period_coverage: str | None              # e.g. "2022-23" or "2003-04 to 2022-23"
     update_frequency: str | None             # "annual", "weekly", "irregular"
@@ -149,6 +150,7 @@ def _load_one(path: Path) -> CuratedDataset:
         sheet=raw.get("sheet"),
         header_row=int(raw.get("header_row", 1)),
         data_start_row=raw.get("data_start_row"),
+        max_rows=raw.get("max_rows"),
         layout=layout,  # type: ignore[arg-type]
         period_coverage=raw.get("period_coverage"),
         update_frequency=raw.get("update_frequency"),

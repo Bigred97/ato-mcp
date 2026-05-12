@@ -66,3 +66,9 @@ def gst_monthly_xlsx() -> bytes:
 def ato_occupation_xlsx() -> bytes:
     """Individuals by occupation × sex — ANZSCO 6-digit roles."""
     return (FIXTURE_DIR / "ato_occupation.xlsx").read_bytes()
+
+
+@pytest.fixture
+def smsf_annual_overview_xlsx() -> bytes:
+    """SMSF Annual Overview — exercises sub-table extraction via max_rows."""
+    return (FIXTURE_DIR / "smsf_annual_overview.xlsx").read_bytes()

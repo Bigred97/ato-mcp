@@ -1,0 +1,46 @@
+id: SMSF_FUNDS
+name: SMSF Sector Size — Self-Managed Super Funds Annual Overview
+description: |
+  ATO SMSF Annual Overview 2023-24, Table 1 sub-table 2 ("Annual SMSF
+  population and assets"). Three headline metrics — total SMSFs, total
+  members, total gross assets — over the last 6 financial years. The
+  fastest answer to "how big is the SMSF sector?" — currently ~614,613
+  funds holding ~$997B in assets (2023-24), grown from ~566,871 funds /
+  $711B in 2019-20.
+  Source: ATO Self Managed Super Funds dataset on data.gov.au.
+period_coverage: 2019-20 to 2024-25
+update_frequency: annual
+source_url: https://data.gov.au/data/dataset/self-managed-superannuation-funds
+download_url: https://data.gov.au/data/dataset/2fd970ec-984e-4593-bbad-2e69a5fa7a89/resource/7a50c5c8-5c0e-4a4b-a11e-feaad39f2bd0/download/smsf-annual-overview-2023-24.xlsx
+format: xlsx
+sheet: Table 1
+header_row: 13
+data_start_row: 14
+max_rows: 3
+layout: transposed
+cache_kind: data
+metric_label_column: ""
+search_keywords:
+  - smsf
+  - self managed super
+  - super fund count
+  - super assets
+  - retirement sector size
+  - smsf population
+  - smsf assets
+  - super industry
+  - fintech
+discovery:
+  package_id: self-managed-superannuation-funds
+  resource_name_pattern: '^SMSF Annual Overview \d{4}-\d{2}$'
+columns:
+  metric_label:
+    source_column: ""
+    description: SMSF sector metric (Total SMSFs / Total members / Total gross assets).
+    role: dimension
+    dtype: string
+dimension_values:
+  metric_label:
+    total_smsfs: Total SMSFs
+    total_members: Total members
+    total_gross_assets_millions: Total gross assets ($m)
