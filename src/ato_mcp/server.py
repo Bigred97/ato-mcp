@@ -27,7 +27,7 @@ from pydantic import Field
 from . import catalog, curated
 from .client import ATOAPIError, ATOClient
 from .discovery import DiscoveryError, DiscoverySpec, resolve_latest_url
-from .models import DataResponse, DatasetDetail, DatasetSummary, ColumnDetail
+from .models import DataResponse, DatasetDetail, DatasetSummary, ColumnDetail, Observation
 from .parsing import drop_blank_rows, read_csv, read_xlsx
 from .shaping import build_response
 
@@ -586,6 +586,112 @@ async def latest(
     return await _get_data_impl(
         dataset_id, filters, measures, None, None, "records", last_n=1
     )
+
+
+@mcp.tool
+async def top_n(
+    dataset_id: Annotated[
+        str,
+        Field(
+            description="Curated dataset ID. Use search_datasets() / list_curated().",
+            examples=["CORP_TRANSPARENCY", "IND_POSTCODE_MEDIAN", "COMPANY_INDUSTRY"],
+        ),
+    ],
+    measure: Annotated[
+        str,
+        Field(
+            description=(
+                "Plain-English measure key to rank by. Use describe_dataset() "
+                "to see available measures."
+            ),
+            examples=["total_income", "median_taxable_income_2022_23", "tax_payable"],
+        ),
+    ],
+    n: Annotated[
+        int,
+        Field(
+            description="How many top (or bottom) rows to return.",
+            ge=1,
+            le=500,
+            examples=[5, 10, 20, 50],
+        ),
+    ] = 10,
+    filters: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Optional dimension filters, same shape as get_data.",
+            examples=[
+                {"state": "nsw"},
+                {"income_year": "2023-24"},
+                {"industry_broad": "C. Manufacturing"},
+            ],
+        ),
+    ] = None,
+    direction: Annotated[
+        Literal["top", "bottom"],
+        Field(
+            description=(
+                "'top' returns the N rows with the LARGEST measure values "
+                "(highest tax payable, biggest population, etc.). 'bottom' "
+                "returns the SMALLEST."
+            ),
+            examples=["top", "bottom"],
+        ),
+    ] = "top",
+) -> DataResponse:
+    """Return the N rows with the largest (or smallest) value of a measure.
+
+    This is the most common agent workflow: "show me the top 10 X by Y".
+    Without this tool, an agent would call get_data, receive the full table,
+    and then sort/slice locally — wasting tokens and turns. top_n does the
+    rank server-side and returns only the requested rows.
+
+    Examples:
+        # Top 10 corporate taxpayers in 2023-24
+        top_n("CORP_TRANSPARENCY", "tax_payable", n=10)
+
+        # 20 NSW postcodes with the highest median income (2022-23)
+        top_n("IND_POSTCODE_MEDIAN", "median_taxable_income_2022_23",
+              filters={"state": "nsw"}, n=20)
+
+        # 5 lowest-income postcodes in QLD
+        top_n("IND_POSTCODE_MEDIAN", "median_taxable_income_2022_23",
+              filters={"state": "qld"}, n=5, direction="bottom")
+
+    Returns:
+        DataResponse with at most `n` records, sorted by `measure` value
+        in the requested direction. Other fields (period, unit, attribution)
+        match a regular get_data call.
+    """
+    # Validate inputs that pydantic's runtime can't enforce strictly when
+    # called directly (Literal/ge/le are type-checker-only in some paths).
+    if not isinstance(measure, str) or not measure.strip():
+        raise ValueError(
+            "measure is required and must be a non-empty string. "
+            "Use describe_dataset() to see available measure keys."
+        )
+    if isinstance(n, bool) or not isinstance(n, int):
+        raise ValueError(
+            f"n must be a positive integer, got {n!r} ({type(n).__name__})."
+        )
+    if n < 1:
+        raise ValueError(f"n must be >= 1, got {n}.")
+    if direction not in ("top", "bottom"):
+        raise ValueError(
+            f"direction must be 'top' or 'bottom', got {direction!r}."
+        )
+
+    # Run a full get_data first, then rank + slice. The parsed-DataFrame cache
+    # means this is essentially free after the first hit.
+    full = await _get_data_impl(
+        dataset_id, filters, measure, None, None, "records", last_n=None,
+    )
+    # Filter out null values, sort, slice
+    valid = [r for r in full.records if isinstance(r, Observation) and r.value is not None]
+    valid.sort(key=lambda r: r.value, reverse=(direction == "top"))
+    top = valid[:n]
+    # Preserve the response envelope; replace records and row_count
+    return full.model_copy(update={"records": top, "row_count": len(top)})
 
 
 @mcp.tool

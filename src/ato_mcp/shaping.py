@@ -103,17 +103,21 @@ def _coerce_dtypes(df: pd.DataFrame, cd: CuratedDataset) -> pd.DataFrame:
 
 
 def _to_clean_string(series: pd.Series) -> pd.Series:
-    """Coerce a column to pandas StringDtype WITHOUT producing trailing '.0'.
+    """Coerce a column to pandas StringDtype, clean of formatting noise.
 
-    pandas reads digit-only columns (ABN, postcode) as floats, and a plain
-    `.astype('string')` yields '94600082111.0' instead of '94600082111'.
-    We route whole-number floats through Int64 first, then to string.
+    Two transforms:
+    1. Digit-only columns (ABN, postcode) come from pandas as floats; plain
+       `.astype('string')` yields '94600082111.0'. We route whole-number
+       floats through Int64 first to drop the trailing '.0'.
+    2. Text columns (state, charity_size) often arrive with trailing/leading
+       whitespace from the source file ('NT ' instead of 'NT'). We strip
+       once here so every downstream filter comparison sees the clean form.
     """
     if pd.api.types.is_numeric_dtype(series):
         rounded = series.dropna()
         if not rounded.empty and (rounded.astype("float64") % 1 == 0).all():
             return series.astype("Int64").astype("string")
-    return series.astype("string")
+    return series.astype("string").str.strip()
 
 
 def _apply_filters(

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 2026-05-12
 
+### Added — `top_n` MCP tool (6th tool)
+
+- **`top_n(dataset_id, measure, n=10, filters=None, direction="top")`** —
+  ranks rows by a measure and returns the top (or bottom) N. The most
+  common agent workflow ("show me the top 10 X by Y") now collapses to
+  a single server-side call. Saves the agent from pulling every row and
+  ranking client-side.
+- Verified against real data:
+  - Top 5 corp taxpayers 2023-24: Rio Tinto ($6.25B), BHP ($6.01B),
+    Fortescue ($3.93B), Chevron ($3.52B), CommBank ($3.43B).
+  - Top NSW postcodes by median income: 2043 (Erskineville/Newtown $92k),
+    2039 (Rozelle), 2028 (Double Bay).
+- Strict runtime validation on `n`, `direction`, and `measure` (Python's
+  `Literal` annotation is type-checker-only).
+- 13 new tests in `test_top_n.py`.
+
+### Bug fixes
+
+- **Trailing-whitespace state codes**: ATO ships some state values with a
+  trailing space (`'NT '`, `'SA '`). Filters that compared user-supplied
+  `'nt'` (which we already strip + alias-resolve to `'NT'`) silently
+  returned 0 rows. Fix: `_to_clean_string` now strips whitespace on all
+  string-typed columns at dtype coercion time, so every downstream filter
+  comparison sees the canonical form.
+
 ### Performance
 
 - **Parsed-DataFrame in-process cache**: warm get_data() hits no longer

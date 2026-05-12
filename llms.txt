@@ -4,12 +4,13 @@ MCP (Model Context Protocol) server giving Claude and other LLM agents plain-Eng
 
 ## What's exposed
 
-Five MCP tools — same surface as the sister packages:
+Six MCP tools — superset of the sister packages (top_n is ato-mcp specific):
 
 - search_datasets(query, limit=10) -> list[DatasetSummary]
 - describe_dataset(dataset_id) -> DatasetDetail
 - get_data(dataset_id, filters?, measures?, start_period?, end_period?, format?) -> DataResponse
 - latest(dataset_id, filters?, measures?) -> DataResponse
+- top_n(dataset_id, measure, n=10, filters?, direction="top"|"bottom") -> DataResponse
 - list_curated() -> list[str]
 
 ## Curated datasets (v0.1)

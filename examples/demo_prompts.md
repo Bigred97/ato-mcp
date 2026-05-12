@@ -12,6 +12,12 @@ All values below were verified live against `data.gov.au` on 2026-05-12. If your
 
 **Expected**: `total_income $10.26B`, `taxable_income $7.04B`, `tax_payable $2.11B`. Tool: `ato:get_data` on `CORP_TRANSPARENCY` with `entity_name` filter.
 
+## 1b. Top corporate taxpayers (uses `top_n` directly)
+
+> Who paid the most corporate income tax in Australia in 2023-24? Give me the top 10 entities ranked by tax payable.
+
+**Expected**: Rio Tinto ($6.25B), BHP ($6.01B), Fortescue ($3.93B), Chevron ($3.52B), CommBank ($3.43B), ... Tool: `ato:top_n("CORP_TRANSPARENCY", "tax_payable", n=10)`. One call, ranked server-side.
+
 ---
 
 ## 2. Property-tech — postcode income trajectory
@@ -27,6 +33,12 @@ All values below were verified live against `data.gov.au` on 2026-05-12. If your
 > Compare the 2022-23 median taxable income across these Sydney postcodes: 2000, 2008 (Pyrmont), 2026 (Bondi), 2027 (Darling Point), 2031 (Randwick). Rank them highest to lowest and show me the gap between top and bottom.
 
 **Expected**: 5 records. 2027 (Darling Point) at the top, low-density CBD postcodes lower. Tool: `ato:get_data` with multi-value postcode filter.
+
+## 3b. Top 20 NSW postcodes by income (uses `top_n`)
+
+> What are the 20 highest-earning postcodes in NSW by 2022-23 median taxable income? Rank them.
+
+**Expected**: Inner-west and eastern-suburbs Sydney dominate. 2043 (Erskineville/Newtown ~$92k), 2039 (Rozelle ~$90k), 2028 (Double Bay ~$89k), 2061 (Kirribilli), 2062 (Cremorne)... Tool: `ato:top_n("IND_POSTCODE_MEDIAN", "median_taxable_income_2022_23", n=20, filters={"state": "nsw"})`.
 
 ---
 
