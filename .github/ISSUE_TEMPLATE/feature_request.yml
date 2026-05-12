@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest a new tool, F-table, or behaviour.
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Higher chance of merge if you frame it around a real use case ("I want to ask Claude X and currently I have to do Y").
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: What are you trying to do?
+      placeholder: I want to ask Claude about ATO government bond yields and currently ato-mcp doesn't curate F2.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: |
+        Concrete: which file would change, what would the new tool/curated YAML look like, what does the user-visible API become?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: e.g. "I could just pass raw ATO series IDs to get_data, but..."
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Add a curated F-table YAML
+        - New MCP tool
+        - Change to existing tool's signature
+        - Change to default behaviour
+        - Documentation
+        - Other
+    validations:
+      required: true

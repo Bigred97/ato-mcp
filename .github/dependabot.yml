@@ -1,0 +1,39 @@
+version: 2
+
+updates:
+  # Python dependencies (pyproject.toml + uv.lock)
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "10:00"
+      timezone: Australia/Sydney
+    open-pull-requests-limit: 5
+    groups:
+      # Group all minor + patch updates into one PR per week.
+      python-runtime-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+    labels: [dependencies]
+    commit-message:
+      prefix: deps
+      include: scope
+
+  # GitHub Actions used in workflows
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "10:00"
+      timezone: Australia/Sydney
+    open-pull-requests-limit: 3
+    groups:
+      gha-minor-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+    labels: [dependencies, github-actions]
+    commit-message:
+      prefix: ci
+      include: scope

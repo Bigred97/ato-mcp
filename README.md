@@ -1,6 +1,12 @@
 # ato-mcp
 
-**MCP server for Australian Taxation Office statistics.** Plain-English access to personal tax by postcode, company tax by industry, corporate tax transparency for every $100M+ entity, super contributions by age, and the live ACNC charity register — all from a single `uvx` command.
+[![tests](https://github.com/Bigred97/ato-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/Bigred97/ato-mcp/actions/workflows/test.yml)
+[![PyPI](https://img.shields.io/pypi/v/ato-mcp.svg)](https://pypi.org/project/ato-mcp/)
+[![Python](https://img.shields.io/pypi/pyversions/ato-mcp.svg)](https://pypi.org/project/ato-mcp/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Glama MCP server quality](https://glama.ai/mcp/servers/Bigred97/ato-mcp/badges/score.svg)](https://glama.ai/mcp/servers/Bigred97/ato-mcp)
+
+**MCP server for Australian Taxation Office statistics.** Plain-English access to personal tax by postcode, company tax by industry, corporate tax transparency for every $100M+ entity, super contributions by age, salary by occupation, monthly GST collections, and the live ACNC charity register — all from a single `uvx` command.
 
 ```text
 "What's the median taxable income in postcode 2000?"

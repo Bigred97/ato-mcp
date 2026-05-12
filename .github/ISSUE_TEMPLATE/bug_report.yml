@@ -1,0 +1,72 @@
+name: Bug report
+description: Something works wrong, returns wrong data, or crashes.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing! Please give us enough to reproduce. The fastest path to a fix is a minimal reproducer + the version you're running.
+
+  - type: input
+    id: version
+    attributes:
+      label: ato-mcp version
+      description: Run `python -c "import ato_mcp; print(ato_mcp.__version__)"`
+      placeholder: 0.1.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: client
+    attributes:
+      label: MCP client
+      options:
+        - Claude Desktop
+        - Cursor
+        - Windsurf
+        - Cline
+        - Direct Python (no MCP client)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: Reproducer
+      description: |
+        The exact tool call(s) that trigger the bug. Either the MCP request payload or the equivalent Python:
+        ```python
+        from ato_mcp import server
+        await server.latest("F1.1", series="cash_rate_target")
+        ```
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened
+      description: Error message, wrong value, surprising response shape, etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: |
+        - Python version (`python --version`)
+        - OS (macOS / Linux / Windows + version)
+        - How you installed (`uvx ato-mcp`, `uv pip install -e .`, etc.)
+      placeholder: |
+        Python 3.12.3, macOS 15, installed via uvx
