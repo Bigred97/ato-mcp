@@ -78,3 +78,9 @@ def smsf_annual_overview_xlsx() -> bytes:
 def sbb_benchmarks_xlsx() -> bytes:
     """ATO Small Business Benchmarks 2023-24 — 100 industries × ratio columns."""
     return (FIXTURE_DIR / "sbb_benchmarks.xlsx").read_bytes()
+
+
+@pytest.fixture
+def help_debt_xlsx() -> bytes:
+    """ATO HELP / HECS annual debt statistics."""
+    return (FIXTURE_DIR / "help_debt.xlsx").read_bytes()

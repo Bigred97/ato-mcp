@@ -73,7 +73,7 @@ Every response is the same shape — `dataset_id`, `dataset_name`, `query`, `per
 
 ---
 
-## Curated datasets (10 in v0.1)
+## Curated datasets (11 in v0.1)
 
 | ID                    | What it is                                                                          | Period             | Coverage                  |
 |-----------------------|-------------------------------------------------------------------------------------|--------------------|---------------------------|
@@ -87,6 +87,7 @@ Every response is the same shape — `dataset_id`, `dataset_name`, `query`, `per
 | `ATO_OCCUPATION`      | Median/average income (taxable, salary/wage, total) by ANZSCO occupation × sex      | 2022-23            | ~1,200 jobs × 7 measures  |
 | `SMSF_FUNDS`          | SMSF sector size — total funds, total members, total gross assets (trillion-$ sector) | 2019-20 → 2024-25  | 3 metrics × 6 years       |
 | `SBB_BENCHMARKS`      | Industry total-expense + COGS ratio bands by turnover bracket (~100 industries) | 2023-24            | 12 measures × 100 industries |
+| `HELP_DEBT`           | HECS/HELP outstanding debt, indexation, compulsory + voluntary repayments annual | 2005-06 → 2024-25  | 8 measures × 20 years     |
 
 Adding a new dataset is a single YAML drop into `src/ato_mcp/data/curated/` — see [CONTRIBUTING.md](CONTRIBUTING.md).
 

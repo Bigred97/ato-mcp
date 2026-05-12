@@ -1,0 +1,89 @@
+id: HELP_DEBT
+name: HECS / HELP Outstanding Debt and Repayments (Annual)
+description: |
+  ATO Higher Education Loan Program statistics — annual snapshot of total
+  incurred HECS/HELP debt, indexation, compulsory + voluntary repayments,
+  and write-offs from 2005-06 to 2024-25. Universally relatable: every
+  Australian uni graduate has interacted with this system. Headline 2024-25
+  numbers: $125.25B total debt, $21.76B annual indexation, $52.07B in
+  compulsory repayments, $11.82B in voluntary repayments.
+  Source: ATO Study and Training Support Loans dataset on data.gov.au.
+period_coverage: 2005-06 to 2024-25
+update_frequency: annual
+source_url: https://data.gov.au/data/dataset/higher-education-loan-program-help
+download_url: https://data.gov.au/data/dataset/ce4c58ec-c930-4a05-8a37-f244d960e5f8/resource/0661912a-d114-4155-8b42-63ab1417adea/download/help-statistics-2024-25.xlsx
+format: xlsx
+sheet: Table 1
+header_row: 3
+data_start_row: 4
+layout: wide
+cache_kind: data
+search_keywords:
+  - hecs
+  - help
+  - student debt
+  - student loan
+  - uni debt
+  - indexation
+  - compulsory repayments
+  - voluntary repayments
+  - higher education
+  - heloan
+  - australian student debt
+discovery:
+  package_id: higher-education-loan-program-help
+  resource_name_pattern: '^HELP Statistics \d{4}'
+columns:
+  income_year:
+    source_column: "Year"
+    description: Financial year (e.g. "2024 - 25"). One row per year.
+    role: dimension
+    dtype: string
+  total_debt_aud:
+    source_column: "Total incurred debt ($)"
+    description: Total HECS/HELP debt incurred by end of financial year.
+    unit: AUD
+    role: measure
+    dtype: float
+  indexation_aud:
+    source_column: "Indexation ($)"
+    description: Indexation applied to outstanding HELP balances during the year (CPI / WPI driven).
+    unit: AUD
+    role: measure
+    dtype: float
+  compulsory_repayments_aud:
+    source_column: "Compulsory repayments ($)"
+    description: Compulsory HELP repayments made via the tax system during the year.
+    unit: AUD
+    role: measure
+    dtype: float
+  os_levy_compulsory_aud:
+    source_column: "OS Levy Compulsory repayments ($)"
+    description: Compulsory repayments from the Overseas Levy (off-shore graduates).
+    unit: AUD
+    role: measure
+    dtype: float
+  voluntary_repayments_count:
+    source_column: "Voluntary repayments made (no.)"
+    description: Count of voluntary HELP repayments made during the year.
+    unit: Count
+    role: measure
+    dtype: int
+  voluntary_repayments_aud:
+    source_column: "Voluntary repayments ($)"
+    description: Dollar value of voluntary HELP repayments during the year.
+    unit: AUD
+    role: measure
+    dtype: float
+  voluntary_bonus_aud:
+    source_column: "Bonus on voluntary repayments ($)"
+    description: Bonus credited on voluntary repayments (ATO incentive — phased out for some years).
+    unit: AUD
+    role: measure
+    dtype: float
+  debts_written_off_aud:
+    source_column: "Value of debts writen off ($)"
+    description: Total dollar value of HELP debts written off during the year (deceased estates, hardship, etc.). Note "writen" is the ATO's spelling in the source file.
+    unit: AUD
+    role: measure
+    dtype: float

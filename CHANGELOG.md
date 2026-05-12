@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 2026-05-13
+
+### Added — `HELP_DEBT` curated dataset (11th dataset)
+
+- ATO HELP / HECS annual statistics (Table 1) — total outstanding debt,
+  indexation, compulsory and voluntary repayments, write-offs by financial
+  year from 2005-06 to 2024-25. Universally relatable for any Australian
+  uni grad. Headline 2024-25 figures: **$125.3B total HECS debt**, $52.1B
+  in compulsory repayments, $11.8B in voluntary repayments, $21.8B in
+  annual indexation. Sector grew $29B since 2020-21.
+- 6 new tests in `test_help.py` including a year-over-year growth assertion
+  and a repayments-vs-debt sanity check.
+
 ## [Unreleased] — 2026-05-12
 
 ### Added — `SBB_BENCHMARKS` curated dataset (10th dataset)
