@@ -15,9 +15,12 @@ ATO's verbose source column header. Curated YAMLs do the translation.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import re
+from collections import OrderedDict
 from typing import Annotated, Any, Literal
 
+import pandas as pd
 from fastmcp import FastMCP
 from pydantic import Field
 
@@ -38,6 +41,20 @@ mcp = FastMCP("ato-mcp")
 
 _client: ATOClient | None = None
 _client_lock = asyncio.Lock()
+
+# Parsed-DataFrame cache. The byte cache already short-circuits the network,
+# but pandas/openpyxl still re-parses bytes on every warm call — for the
+# 7.9MB IND_POSTCODE that's ~4s of pure CPU. We cache the post-parse,
+# post-drop_blank_rows DataFrame in-process so repeat queries land in ~50ms.
+# Bounded LRU; eviction keeps memory under ~150-300MB across all entries.
+_DF_CACHE_MAX_ENTRIES = 8
+_df_cache: OrderedDict[tuple, pd.DataFrame] = OrderedDict()
+_df_cache_lock = asyncio.Lock()
+
+
+def reset_df_cache_for_tests() -> None:
+    """Drop the parsed-DataFrame cache. Tests use this to start from clean."""
+    _df_cache.clear()
 
 
 async def _get_client() -> ATOClient:
@@ -164,7 +181,12 @@ async def _resolve_download_url(cd: curated.CuratedDataset, client: ATOClient) -
 
 
 async def _fetch_and_parse(cd: curated.CuratedDataset, *, kind: str = "data"):
-    """Download the dataset's primary resource and parse it into a DataFrame."""
+    """Download the dataset's primary resource and parse it into a DataFrame.
+
+    The parsed DataFrame is cached in-process keyed by (url, parse-spec, body
+    content hash). The hash makes the cache content-aware: if the byte cache
+    serves stale bytes that get refreshed, the hash differs and we re-parse.
+    """
     client = await _get_client()
     url = await _resolve_download_url(cd, client)
     try:
@@ -173,6 +195,26 @@ async def _fetch_and_parse(cd: curated.CuratedDataset, *, kind: str = "data"):
         raise ValueError(
             f"Could not fetch dataset {cd.id} from data.gov.au. ({e})"
         ) from e
+
+    # Content-aware cache key. We can't hash the whole body on every warm call
+    # (sha256 over 8MB is ~30ms — defeats the perf benefit), so we use a
+    # 3-part signature: total byte length + hash of head + hash of tail. Same
+    # length AND same head AND same tail = same file in practice (XLSX is a
+    # zip; appending or truncating shifts both length and tail hash).
+    head = body[:8192]
+    tail = body[-2048:] if len(body) > 8192 else b""
+    body_sig = hashlib.sha256(head + tail).digest()
+    cache_key = (
+        url, cd.format, cd.sheet, cd.header_row, cd.data_start_row,
+        len(body), body_sig,
+    )
+
+    async with _df_cache_lock:
+        cached = _df_cache.get(cache_key)
+        if cached is not None:
+            _df_cache.move_to_end(cache_key)
+            return cached
+
     if cd.format == "csv":
         df = read_csv(body)
     else:
@@ -191,6 +233,13 @@ async def _fetch_and_parse(cd: curated.CuratedDataset, *, kind: str = "data"):
     dim_source_cols = [c.source_column for c in cd.columns.values() if c.role == "dimension"]
     if dim_source_cols:
         df = drop_blank_rows(df, dim_source_cols)
+
+    async with _df_cache_lock:
+        _df_cache[cache_key] = df
+        _df_cache.move_to_end(cache_key)
+        while len(_df_cache) > _DF_CACHE_MAX_ENTRIES:
+            _df_cache.popitem(last=False)
+
     return df
 
 

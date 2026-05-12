@@ -53,21 +53,21 @@ def test_year_from_text_extracts_highest():
 
 def test_pick_resource_exact_name_match():
     resources = [
-        {"name": "Individuals - Table 5", "url": "https://a/file.xlsx"},
-        {"name": "Individuals - Table 6", "url": "https://a/file6.xlsx"},
-        {"name": "Individuals - Table 7", "url": "https://a/file7.xlsx"},
+        {"name": "Individuals - Table 5", "url": "https://data.gov.au/data/a/file.xlsx"},
+        {"name": "Individuals - Table 6", "url": "https://data.gov.au/data/a/file6.xlsx"},
+        {"name": "Individuals - Table 7", "url": "https://data.gov.au/data/a/file7.xlsx"},
     ]
     spec = DiscoverySpec(package_id="x", resource_name="Individuals - Table 6")
     m = _pick_resource(resources, spec)
     assert m is not None
-    assert m["url"] == "https://a/file6.xlsx"
+    assert m["url"] == "https://data.gov.au/data/a/file6.xlsx"
 
 
 def test_pick_resource_pattern_picks_highest_year():
     resources = [
-        {"name": "2021-22 Report of Entity Tax Information", "url": "https://a/2021.xlsx"},
-        {"name": "2023-24 Report of Entity Tax Information", "url": "https://a/2023.xlsx"},
-        {"name": "2022-23 Report of Entity Tax Information", "url": "https://a/2022.xlsx"},
+        {"name": "2021-22 Report of Entity Tax Information", "url": "https://data.gov.au/data/a/2021.xlsx"},
+        {"name": "2023-24 Report of Entity Tax Information", "url": "https://data.gov.au/data/a/2023.xlsx"},
+        {"name": "2022-23 Report of Entity Tax Information", "url": "https://data.gov.au/data/a/2022.xlsx"},
     ]
     spec = DiscoverySpec(
         package_id="x",
@@ -75,11 +75,11 @@ def test_pick_resource_pattern_picks_highest_year():
     )
     m = _pick_resource(resources, spec)
     assert m is not None
-    assert m["url"] == "https://a/2023.xlsx"
+    assert m["url"] == "https://data.gov.au/data/a/2023.xlsx"
 
 
 def test_pick_resource_no_match_returns_none():
-    resources = [{"name": "Other Resource", "url": "https://a/other.xlsx"}]
+    resources = [{"name": "Other Resource", "url": "https://data.gov.au/data/a/other.xlsx"}]
     spec = DiscoverySpec(package_id="x", resource_name="Missing One")
     assert _pick_resource(resources, spec) is None
 
@@ -88,12 +88,12 @@ def test_pick_resource_skips_non_dict_entries():
     resources = [
         "not a dict",  # type: ignore[list-item]
         None,
-        {"name": "Right One", "url": "https://a/file.xlsx"},
+        {"name": "Right One", "url": "https://data.gov.au/data/a/file.xlsx"},
     ]
     spec = DiscoverySpec(package_id="x", resource_name="Right One")
     m = _pick_resource(resources, spec)
     assert m is not None
-    assert m["url"] == "https://a/file.xlsx"
+    assert m["url"] == "https://data.gov.au/data/a/file.xlsx"
 
 
 # ---------------------------------------------------------------------------
@@ -148,9 +148,9 @@ async def test_resolve_with_exact_package_id_and_name(fresh_cache: Cache):
             "result": {
                 "name": "corporate-transparency",
                 "resources": [
-                    {"name": "2021-22 Report", "url": "https://x/2021.xlsx"},
-                    {"name": "2023-24 Report of Entity Tax Information", "url": "https://x/2023.xlsx"},
-                    {"name": "2022-23 Report", "url": "https://x/2022.xlsx"},
+                    {"name": "2021-22 Report", "url": "https://data.gov.au/data/x/2021.xlsx"},
+                    {"name": "2023-24 Report of Entity Tax Information", "url": "https://data.gov.au/data/x/2023.xlsx"},
+                    {"name": "2022-23 Report", "url": "https://data.gov.au/data/x/2022.xlsx"},
                 ],
             },
         })
@@ -163,7 +163,7 @@ async def test_resolve_with_exact_package_id_and_name(fresh_cache: Cache):
                 resource_name="2023-24 Report of Entity Tax Information",
             ),
         )
-    assert url == "https://x/2023.xlsx"
+    assert url == "https://data.gov.au/data/x/2023.xlsx"
 
 
 @pytest.mark.asyncio
@@ -194,7 +194,7 @@ async def test_resolve_with_package_pattern_picks_latest_year(fresh_cache: Cache
             "result": {
                 "name": "taxation-statistics-2022-23",
                 "resources": [
-                    {"name": "Individuals - Table 6", "url": "https://x/t6.xlsx"},
+                    {"name": "Individuals - Table 6", "url": "https://data.gov.au/data/x/t6.xlsx"},
                 ],
             },
         })
@@ -208,7 +208,7 @@ async def test_resolve_with_package_pattern_picks_latest_year(fresh_cache: Cache
                 resource_name="Individuals - Table 6",
             ),
         )
-    assert url == "https://x/t6.xlsx"
+    assert url == "https://data.gov.au/data/x/t6.xlsx"
 
 
 # ---------------------------------------------------------------------------
@@ -300,6 +300,74 @@ async def test_resolve_malformed_url_raises(fresh_cache: Cache):
                 client,
                 DiscoverySpec(package_id="x", resource_name="Right One"),
             )
+
+
+# ---------------------------------------------------------------------------
+# Host pinning — discovery must only accept data.gov.au origins.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_resolve_off_host_url_rejected(fresh_cache: Cache):
+    """If CKAN returns a valid-looking HTTPS URL pointing at attacker.com,
+    discovery must refuse it. Defense-in-depth against a compromised CKAN."""
+    respx.get(
+        url__startswith="https://data.gov.au/data/api/3/action/package_show",
+    ).mock(
+        return_value=httpx.Response(200, json={
+            "success": True,
+            "result": {
+                "name": "x",
+                "resources": [{"name": "Right One", "url": "https://attacker.com/evil.xlsx"}],
+            },
+        })
+    )
+    async with ATOClient(cache=fresh_cache) as client:
+        with pytest.raises(DiscoveryError, match="not on data.gov.au"):
+            await resolve_latest_url(
+                client,
+                DiscoverySpec(package_id="x", resource_name="Right One"),
+            )
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_resolve_data_gov_au_subdomain_allowed(fresh_cache: Cache):
+    """data.gov.au has CDN subdomains (e.g. www.data.gov.au, cdn.data.gov.au).
+    Subdomain matches must pass through."""
+    respx.get(
+        url__startswith="https://data.gov.au/data/api/3/action/package_show",
+    ).mock(
+        return_value=httpx.Response(200, json={
+            "success": True,
+            "result": {
+                "name": "x",
+                "resources": [{"name": "Right One", "url": "https://www.data.gov.au/data/path/file.xlsx"}],
+            },
+        })
+    )
+    async with ATOClient(cache=fresh_cache) as client:
+        url = await resolve_latest_url(
+            client,
+            DiscoverySpec(package_id="x", resource_name="Right One"),
+        )
+    assert url.startswith("https://www.data.gov.au/")
+
+
+def test_is_data_gov_au_host_check():
+    from ato_mcp.discovery import _is_data_gov_au
+    assert _is_data_gov_au("https://data.gov.au/data/x.xlsx") is True
+    assert _is_data_gov_au("https://www.data.gov.au/data/x.xlsx") is True
+    assert _is_data_gov_au("https://cdn.data.gov.au/data/x.xlsx") is True
+    assert _is_data_gov_au("https://DATA.gov.au/data/x.xlsx") is True  # case-insensitive
+    # Off-host
+    assert _is_data_gov_au("https://attacker.com/evil.xlsx") is False
+    assert _is_data_gov_au("https://data.gov.au.attacker.com/x.xlsx") is False  # suffix attack
+    assert _is_data_gov_au("https://notdata.gov.au/x.xlsx") is False
+    assert _is_data_gov_au("https://ev.il/data.gov.au") is False
+    # Garbage
+    assert _is_data_gov_au("not a url") is False
+    assert _is_data_gov_au("") is False
 
 
 # ---------------------------------------------------------------------------

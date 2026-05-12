@@ -16,6 +16,7 @@ is the openpyxl read time for the bigger files (~7-8MB → ~1.5s cold load).
 """
 from __future__ import annotations
 
+import zipfile
 from io import BytesIO
 
 import pandas as pd
@@ -67,6 +68,11 @@ def read_xlsx(
     except ValueError as e:
         # pandas raises ValueError("Worksheet named '...' not found")
         raise ParseError(f"sheet {sheet!r} not found in workbook: {e}") from e
+    except (KeyError, OSError, zipfile.BadZipFile) as e:
+        # openpyxl/zipfile raises BadZipFile on non-zip bodies, KeyError for
+        # missing zip entries when truncated, and OSError on IO problems.
+        # Wrap so callers see a uniform ParseError instead of arbitrary internals.
+        raise ParseError(f"could not parse XLSX (corrupt or truncated body): {e}") from e
 
     # If data_start_row > header_row + 1 there's a spacer row to drop.
     if data_start_row is not None:

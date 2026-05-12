@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 2026-05-12
 
+### Performance
+
+- **Parsed-DataFrame in-process cache**: warm get_data() hits no longer
+  re-parse the XLSX. Measured speedups:
+  - `IND_POSTCODE` (7.9MB): 4500ms → 34ms (**132× faster**)
+  - `CORP_TRANSPARENCY` (270KB): 400ms → 8ms (53× faster)
+  - `IND_POSTCODE_MEDIAN` (560KB): 400ms → 22ms (18× faster)
+  Cache is bounded LRU (8 entries), keyed by (url, parse-spec, content
+  signature) so a content change at the byte cache forces a re-parse. Sub-50ms
+  warm hits across every dataset now — fast enough that Claude Desktop feels
+  instant.
+
+### Security
+
+- **Discovery host pin**: `discovery.py` now refuses any resolved resource
+  URL whose host isn't `data.gov.au` or a subdomain thereof. Defense in
+  depth against a compromised CKAN returning a malicious URL. The host
+  check is case-insensitive and resists suffix attacks
+  (e.g. `data.gov.au.attacker.com` is correctly rejected).
+
+### Bug fixes
+
+- `parsing.read_xlsx` now wraps `zipfile.BadZipFile`, `KeyError`, and
+  `OSError` as `ParseError`. Previously corrupted XLSX bytes leaked
+  internal openpyxl/zipfile exceptions; now callers see a uniform error
+  type they can catch.
+- `test_flow_discovery_resolves_real_ckan_url` retries once on transient
+  network errors. Caught 2 flakes in 10-run stability after the loop had
+  cumulatively hit data.gov.au ~130 times — a single retry is sufficient
+  and means subsequent stability runs stay clean.
+
 ### Added — GST_MONTHLY (first transposed-layout dataset)
 
 - **New curated dataset `GST_MONTHLY`**: monthly Goods and Services Tax /

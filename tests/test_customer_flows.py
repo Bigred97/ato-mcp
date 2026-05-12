@@ -221,13 +221,28 @@ async def test_flow_discovery_resolves_real_ckan_url():
     This is the canary that detects when ATO renames a dataset or resource —
     the kind of breakage that would otherwise only surface when a user runs
     a real query and finds stale data.
+
+    One retry is allowed: data.gov.au occasionally returns transient errors
+    under load. A second failure indicates a real regression.
     """
+    import asyncio as _asyncio
     from ato_mcp.client import ATOClient
-    from ato_mcp.discovery import DiscoverySpec, resolve_latest_url
+    from ato_mcp.discovery import DiscoveryError, DiscoverySpec, resolve_latest_url
+
+    async def _resolve_with_retry(client, spec, retries: int = 1):
+        last_error: Exception | None = None
+        for attempt in range(retries + 1):
+            try:
+                return await resolve_latest_url(client, spec)
+            except DiscoveryError as e:
+                last_error = e
+                if attempt < retries:
+                    await _asyncio.sleep(0.5)  # brief backoff for transient blip
+        raise last_error  # type: ignore[misc]
 
     async with ATOClient() as client:
         # 1. Resource-in-fixed-package discovery (CORP_TRANSPARENCY pattern)
-        url = await resolve_latest_url(
+        url = await _resolve_with_retry(
             client,
             DiscoverySpec(
                 package_id="corporate-transparency",
@@ -238,7 +253,7 @@ async def test_flow_discovery_resolves_real_ckan_url():
         assert "corporate-transparency" in url or "report-of-entity-tax-information" in url.lower()
 
         # 2. Latest-package discovery (IND_POSTCODE pattern)
-        url = await resolve_latest_url(
+        url = await _resolve_with_retry(
             client,
             DiscoverySpec(
                 organization_id="australiantaxationoffice",

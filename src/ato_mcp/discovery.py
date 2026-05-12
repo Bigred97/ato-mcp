@@ -106,7 +106,27 @@ async def resolve_latest_url(client: ATOClient, spec: DiscoverySpec) -> str:
         raise DiscoveryError(
             f"package {package_id!r}: resource has invalid url {url!r}"
         )
+    # Defense-in-depth: discovery resolves URLs from CKAN responses. If CKAN
+    # ever served a URL pointing somewhere malicious, we'd happily download
+    # from it. Pin the host so only data.gov.au origins are accepted.
+    if not _is_data_gov_au(url):
+        raise DiscoveryError(
+            f"package {package_id!r}: resolved url {url!r} is not on data.gov.au — refusing"
+        )
     return url
+
+
+_ALLOWED_HOSTS = ("data.gov.au", ".data.gov.au")
+
+
+def _is_data_gov_au(url: str) -> bool:
+    """True if the URL's host is data.gov.au or a subdomain of it."""
+    try:
+        from urllib.parse import urlparse
+        host = (urlparse(url).hostname or "").lower()
+    except (ValueError, AttributeError):
+        return False
+    return host == "data.gov.au" or host.endswith(".data.gov.au")
 
 
 async def _resolve_latest_package_id(

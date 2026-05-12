@@ -67,10 +67,20 @@ def test_parse_handles_trailing_blank_rows():
     assert len(cleaned) == 2
 
 
-def test_parse_truncated_xlsx_raises():
-    """A truncated/corrupt XLSX body should raise ParseError, not crash."""
-    with pytest.raises((parsing.ParseError, Exception)):
+def test_parse_truncated_xlsx_raises_parse_error():
+    """A truncated/corrupt XLSX body must raise ParseError specifically —
+    not arbitrary internals from openpyxl/zipfile."""
+    # 0x50 0x4B is the ZIP magic. Looks like XLSX but truncated.
+    with pytest.raises(parsing.ParseError):
         parsing.read_xlsx(b"\x50\x4b\x03\x04garbage", sheet="x", header_row=1)
+
+
+def test_parse_completely_invalid_xlsx_raises_parse_error():
+    """Total garbage that doesn't even look like XLSX must also raise
+    ParseError, not BadZipFile or similar."""
+    with pytest.raises(parsing.ParseError):
+        parsing.read_xlsx(b"this is not an xlsx file at all" * 100,
+                          sheet="x", header_row=1)
 
 
 def test_parse_csv_with_bom():
