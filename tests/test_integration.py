@@ -7,8 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from ato_mcp import server, curated
-
+from ato_mcp import curated, server
 
 pytestmark = pytest.mark.live
 

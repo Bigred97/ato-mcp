@@ -50,7 +50,7 @@ class ATOClient:
     async def aclose(self) -> None:
         await self._http.aclose()
 
-    async def __aenter__(self) -> "ATOClient":
+    async def __aenter__(self) -> ATOClient:
         return self
 
     async def __aexit__(self, *exc: Any) -> None:

@@ -11,9 +11,8 @@ from unittest.mock import patch
 
 import pytest
 
-from ato_mcp import curated, server
+from ato_mcp import server
 from ato_mcp.client import ATOClient
-
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 FIXTURE_MAP = {

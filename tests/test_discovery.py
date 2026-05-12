@@ -12,7 +12,6 @@ These tests use respx so they're fast (no live network).
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import httpx
@@ -381,8 +380,8 @@ async def test_server_falls_back_to_yaml_url_when_discovery_fails():
     # This is exercised end-to-end by the customer_flows live tests;
     # the unit-level invariant is that _resolve_download_url returns
     # cd.download_url on DiscoveryError (see server.py).
-    from ato_mcp.server import _resolve_download_url
     from ato_mcp import curated as cmod
+    from ato_mcp.server import _resolve_download_url
     cmod.reset_registry()
     cd = cmod.get("CORP_TRANSPARENCY")
     # Make a fake client whose fetch_resource will always raise — i.e.
@@ -395,6 +394,7 @@ async def test_server_falls_back_to_yaml_url_when_discovery_fails():
         # but we don't need to make the call: we just need the discovery
         # path to error. Patch fetch_package to always raise.
         from unittest.mock import patch
+
         from ato_mcp.client import ATOAPIError
         async def boom(*a, **kw):
             raise ATOAPIError("mocked failure")

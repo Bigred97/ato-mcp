@@ -15,7 +15,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 _ATO_ATTRIBUTION = (
     "Data sourced from the Australian Taxation Office (and, for charity data, "
     "the Australian Charities and Not-for-profits Commission) via data.gov.au. "

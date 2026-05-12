@@ -14,13 +14,12 @@ to the parsed DataFrame.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
 from typing import Literal
 
 import yaml
-
 
 Layout = Literal["wide", "transposed"]
 
@@ -285,7 +284,7 @@ def resolve_measure_keys(
     elif isinstance(requested, list):
         if not requested:
             raise ValueError(
-                f"measures filter is an empty list. "
+                "measures filter is an empty list. "
                 "Pass at least one measure, or omit `measures` to return all."
             )
         items = [str(x) for x in requested]

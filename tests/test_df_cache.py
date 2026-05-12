@@ -8,15 +8,13 @@ The cache is what makes warm get_data() calls cheap. We probe:
 """
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-from ato_mcp import curated, server
+from ato_mcp import server
 from ato_mcp.client import ATOClient
-
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 FIXTURE_MAP = {
@@ -157,7 +155,7 @@ async def test_cache_invalidates_on_content_change(mocked_read_xlsx_with_counter
 
     with patch.object(ATOClient, "fetch_resource", serve):
         # call 1: v1 body → parse
-        r1 = await server.get_data(
+        await server.get_data(
             "CORP_TRANSPARENCY", filters={"entity_name": "1 MENDS STREET PTY LTD"},
         )
         first_parses = mocked_read_xlsx_with_counter["calls"]

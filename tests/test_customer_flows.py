@@ -13,7 +13,6 @@ import pytest
 
 from ato_mcp import curated, server
 
-
 pytestmark = pytest.mark.live
 
 
@@ -226,6 +225,7 @@ async def test_flow_discovery_resolves_real_ckan_url():
     under load. A second failure indicates a real regression.
     """
     import asyncio as _asyncio
+
     from ato_mcp.client import ATOClient
     from ato_mcp.discovery import DiscoveryError, DiscoverySpec, resolve_latest_url
 

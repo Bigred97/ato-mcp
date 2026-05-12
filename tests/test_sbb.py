@@ -5,8 +5,6 @@ Small Business Benchmarks is a fintech / accounting / tax-advisor goldmine
 """
 from __future__ import annotations
 
-import pytest
-
 from ato_mcp import curated, parsing, shaping
 
 

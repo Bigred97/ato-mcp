@@ -10,8 +10,6 @@ source (2024-25 → 2019-20), and `latest` must still return the newest year.
 """
 from __future__ import annotations
 
-import pytest
-
 from ato_mcp import curated, parsing, shaping
 
 

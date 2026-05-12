@@ -13,7 +13,6 @@ import pytest
 
 from ato_mcp import curated
 
-
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 
 

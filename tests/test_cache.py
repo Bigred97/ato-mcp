@@ -11,13 +11,12 @@ The cache is critical — it's what makes warm calls cheap. Test:
 from __future__ import annotations
 
 import asyncio
-import time
 from datetime import timedelta
 from pathlib import Path
 
 import pytest
 
-from ato_mcp.cache import Cache, TTL
+from ato_mcp.cache import TTL, Cache
 
 
 @pytest.fixture

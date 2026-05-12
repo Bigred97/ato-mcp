@@ -38,6 +38,7 @@ dev = [
     "pytest>=8",
     "pytest-asyncio>=0.23",
     "respx>=0.21",
+    "ruff>=0.5",
 ]
 
 [project.scripts]
@@ -56,3 +57,21 @@ markers = ["live: hits real data.gov.au (downloads ATO XLSX/CSV files)"]
 addopts = "-m 'not live'"
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# Defaults plus pyflakes-extras + pycodestyle warnings + pyupgrade. We don't
+# enable line-length (E501) — long descriptive docstrings in curated YAML
+# generators and test assertions outweigh the cost.
+select = ["F", "E", "W", "UP", "I"]
+ignore = [
+    "E501",   # line too long — docstrings + test messages are intentionally long
+    "UP015",  # `open(file, "r")` — unnecessary mode arg, but explicit is fine
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can re-import for clarity and use fixture pollution patterns
+"tests/*" = ["F401", "F811"]

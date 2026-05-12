@@ -84,21 +84,21 @@ def test_parse_completely_invalid_xlsx_raises_parse_error():
 
 
 def test_parse_csv_with_bom():
-    body = "﻿state,postcode\nNSW,2000\n".encode("utf-8")
+    body = "﻿state,postcode\nNSW,2000\n".encode()
     df = parsing.read_csv(body)
     assert list(df.columns) == ["state", "postcode"]
     assert df.iloc[0]["postcode"] == 2000  # pandas coerced to int
 
 
 def test_parse_csv_with_unicode_data():
-    body = "name,country\n株式会社東京,JP\n🏢 BigCorp,US\n".encode("utf-8")
+    body = "name,country\n株式会社東京,JP\n🏢 BigCorp,US\n".encode()
     df = parsing.read_csv(body)
     assert df.iloc[0]["name"] == "株式会社東京"
     assert df.iloc[1]["name"] == "🏢 BigCorp"
 
 
 def test_parse_csv_with_mixed_dtypes_no_warning():
-    body = "id,value\n1,100\n2,abc\n3,200\n".encode("utf-8")
+    body = b"id,value\n1,100\n2,abc\n3,200\n"
     df = parsing.read_csv(body)
     # value column should be object (mixed) — no pandas warning thrown
     assert len(df) == 3

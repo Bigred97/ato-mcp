@@ -27,7 +27,7 @@ from pydantic import Field
 from . import catalog, curated
 from .client import ATOAPIError, ATOClient
 from .discovery import DiscoveryError, DiscoverySpec, resolve_latest_url
-from .models import DataResponse, DatasetDetail, DatasetSummary, ColumnDetail, Observation
+from .models import ColumnDetail, DataResponse, DatasetDetail, DatasetSummary, Observation
 from .parsing import drop_blank_rows, read_csv, read_xlsx
 from .shaping import build_response
 

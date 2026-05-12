@@ -15,13 +15,12 @@ happens on aliases too.
 from __future__ import annotations
 
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import pandas as pd
 
 from .curated import (
-    CuratedColumn,
     CuratedDataset,
     dimension_columns,
     id_columns,
@@ -176,9 +175,7 @@ def shape_wide(
     measure_by_key = {c.key: c for c in measure_columns(cd)}
 
     records: list[Observation] = []
-    # Vectorise the dim slice once; iterate row-wise for the measure cells.
-    dim_df = df[dim_keys] if dim_keys else df.head(0)
-    for idx, row in df.iterrows():
+    for _, row in df.iterrows():
         dim_vals: dict[str, Any] = {}
         for k in dim_keys:
             raw = row[k]
@@ -498,6 +495,6 @@ def build_response(
         row_count=len(records),
         records=out_records,
         csv=csv_text,
-        retrieved_at=datetime.now(timezone.utc),
+        retrieved_at=datetime.now(UTC),
         ato_url=cd.source_url,
     )

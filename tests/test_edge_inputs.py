@@ -11,7 +11,6 @@ or silently return wrong data.
 """
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 from unittest.mock import patch
 
@@ -19,7 +18,6 @@ import pytest
 
 from ato_mcp import curated, server
 from ato_mcp.client import ATOClient
-
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 FIXTURE_MAP = {
@@ -58,7 +56,7 @@ def mocked_client():
     [],
     {},
     object(),
-    bytes(b"postcode"),
+    b"postcode",
 ])
 async def test_search_datasets_rejects_non_string_query(bad_query):
     with pytest.raises(ValueError):
