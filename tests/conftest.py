@@ -54,3 +54,9 @@ def super_contrib_age_xlsx() -> bytes:
 def acnc_register_csv() -> bytes:
     """ACNC register CSV — head-only sample (~100 rows) so tests stay fast."""
     return (FIXTURE_DIR / "acnc_register_head.csv").read_bytes()
+
+
+@pytest.fixture
+def gst_monthly_xlsx() -> bytes:
+    """GST/WET/LCT monthly collections — transposed-layout fixture."""
+    return (FIXTURE_DIR / "gst_monthly.xlsx").read_bytes()

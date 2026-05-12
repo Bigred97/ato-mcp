@@ -240,6 +240,23 @@ def translate_filter_value(
     )
 
 
+def transposed_measure_aliases(cd: CuratedDataset) -> list[str]:
+    """For a transposed-layout dataset, return the list of alias keys that
+    label rows of the metric_label_column. These act as the dataset's
+    'available measures' since transposed tables don't have measure columns.
+    """
+    if cd.layout != "transposed" or cd.metric_label_column is None:
+        return []
+    label_col = cd.metric_label_column
+    for c in cd.columns.values():
+        if c.source_column == label_col:
+            dv = cd.dimension_values.get(c.key)
+            if dv and dv.values is not None:
+                return list(dv.values.keys())
+            break
+    return []
+
+
 def resolve_measure_keys(
     cd: CuratedDataset, requested: str | list[str] | None
 ) -> list[str]:
@@ -250,8 +267,14 @@ def resolve_measure_keys(
     - "foo" → ["foo"] (validated)
     - ["foo", "bar"] → ["foo", "bar"] (validated)
     Raw source column names also pass through if they match a measure column.
+
+    For transposed-layout datasets without explicit role=measure columns,
+    the metric_label_column's dimension_values aliases double as the
+    available measure keys.
     """
     measure_keys = [c.key for c in measure_columns(cd)]
+    if not measure_keys:
+        measure_keys = transposed_measure_aliases(cd)
     if requested is None:
         return measure_keys
     items: list[str]
@@ -283,9 +306,10 @@ def resolve_measure_keys(
         elif v_str in source_to_key:
             out.append(source_to_key[v_str])
         else:
+            valid_hint = ", ".join(sorted(valid_keys)[:15]) if valid_keys else "(none — dataset has no curated measures)"
             raise ValueError(
                 f"Unknown measure {v!r} for dataset {cd.id!r}. "
-                f"Try one of: {', '.join(sorted(valid_keys)[:15])}"
+                f"Try one of: {valid_hint}"
                 + ("..." if len(valid_keys) > 15 else "")
             )
     # Dedupe while preserving order.

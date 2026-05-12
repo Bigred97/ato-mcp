@@ -1,0 +1,14 @@
+{
+  "_comment": "Local-dev variant. Use this when developing ato-mcp from a checkout (i.e. before the PyPI version is released, or to test unreleased changes). Replace the directory path with your own.",
+  "mcpServers": {
+    "ato": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "/absolute/path/to/ato-mcp",
+        "ato-mcp"
+      ]
+    }
+  }
+}

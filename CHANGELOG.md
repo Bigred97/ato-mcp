@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 2026-05-12
 
+### Added — GST_MONTHLY (first transposed-layout dataset)
+
+- **New curated dataset `GST_MONTHLY`**: monthly Goods and Services Tax /
+  Wine Equalisation Tax / Luxury Car Tax collections from ATO Table 1B,
+  July 2020 forward. Exposes 10 aliased metrics including `net_gst`,
+  `gross_gst`, `input_tax_credits`, `wet_payable`, `net_lct`.
+- This is the first transposed-layout curated dataset to ship. The
+  transposed code path existed since v0.1 but had three latent bugs
+  surfaced and fixed by GST:
+  - `_apply_aliases` dropped unaliased columns; transposed datasets need
+    the period (date) columns preserved.
+  - `shape_transposed` referenced `cd.metric_label_column` directly,
+    which is a *source* column name; after alias renaming the df has
+    *alias* names. Now resolves source → alias inside the shape layer.
+  - `_normalize_period` mis-categorised `"2023-06"` as a financial-year
+    suffix; disambiguation rule added so 01-12 = month, 13-99 = FY end.
+- 13 new tests in `test_transposed.py` covering all the above plus
+  whitespace stripping ("Net GST " → "Net GST" for clean aliasing),
+  period-range filter inclusivity, latest-per-measure semantics, CSV
+  and series output, and unknown-measure error hints.
+
+### Added — examples/
+
+- `examples/claude_desktop_config_all_three.json`: ready-to-paste
+  Claude Desktop config that registers abs-mcp, rba-mcp, and ato-mcp
+  side by side with `--upgrade` for auto-PyPI-refresh.
+- `examples/claude_desktop_config_local.json`: local-dev variant for
+  testing unreleased changes via `uv run --directory ...`.
+- `examples/demo_prompts.md`: six copy-paste prompts each demonstrating
+  a different sellable angle (property-tech, fintech, charity-tech,
+  retirement-tech, B2B intel) with expected numerical answers.
+
 ### Added — auto-update layer
 
 - `discovery.py`: a CKAN-driven resolver that finds the freshest

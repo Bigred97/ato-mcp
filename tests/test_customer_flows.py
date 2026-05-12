@@ -200,9 +200,13 @@ async def test_flow_all_curated_datasets_return_data():
     a broken column map or a stale URL."""
     for dataset_id in curated.list_ids():
         cd = curated.get(dataset_id)
-        # Pick the first measure
-        measures = [c.key for c in cd.columns.values() if c.role == "measure"]
-        first_measure = measures[0]
+        # Wide layouts: first role=measure column. Transposed layouts: first
+        # alias declared in the metric_label column's dimension_values.
+        wide_measures = [c.key for c in cd.columns.values() if c.role == "measure"]
+        if wide_measures:
+            first_measure = wide_measures[0]
+        else:
+            first_measure = curated.transposed_measure_aliases(cd)[0]
         data = await server.get_data(dataset_id, measures=first_measure)
         assert data.row_count > 0, (
             f"{dataset_id} returned no rows for measure {first_measure!r}"

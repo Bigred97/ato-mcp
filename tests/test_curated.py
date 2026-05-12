@@ -29,11 +29,19 @@ def test_every_curated_dataset_has_required_fields():
             assert cd.sheet, f"xlsx dataset {cd.id} missing sheet name"
         assert cd.header_row >= 1, f"bad header_row on {cd.id}"
         assert cd.layout in ("wide", "transposed"), f"bad layout on {cd.id}"
-        # We need at least one dimension OR id, plus measures.
+        # Every dataset must expose some measures — either as role=measure
+        # columns (wide layout) or as dimension_values on the metric_label
+        # column (transposed layout). We check both paths.
         roles = {c.role for c in cd.columns.values()}
-        assert "measure" in roles, f"{cd.id} declares no measure columns"
         if cd.layout == "transposed":
             assert cd.metric_label_column, f"transposed {cd.id} needs metric_label_column"
+            aliases = curated.transposed_measure_aliases(cd)
+            assert aliases, (
+                f"transposed {cd.id} declares no measures — needs dimension_values "
+                f"on the metric_label column"
+            )
+        else:
+            assert "measure" in roles, f"wide {cd.id} declares no measure columns"
 
 
 def test_no_duplicate_curated_ids():

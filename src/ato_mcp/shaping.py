@@ -53,8 +53,14 @@ def _safe_str(v: Any) -> str | None:
 
 
 def _apply_aliases(df: pd.DataFrame, cd: CuratedDataset) -> pd.DataFrame:
-    """Rename source columns to their curated aliases. Drops columns not in
-    the curated set so the response stays tight."""
+    """Rename source columns to their curated aliases.
+
+    For wide layouts: drop columns not in the curated set so the response
+    stays tight (we only return columns the YAML promises).
+    For transposed layouts: preserve unaliased columns — they're the period
+    columns (years/months) which carry the actual data values and aren't
+    enumerable in the YAML.
+    """
     rename_map: dict[str, str] = {}
     for col in cd.columns.values():
         if col.source_column in df.columns:
@@ -70,9 +76,12 @@ def _apply_aliases(df: pd.DataFrame, cd: CuratedDataset) -> pd.DataFrame:
             "https://github.com/Bigred97/ato-mcp/issues."
         )
     out = df.rename(columns=rename_map)
-    # Drop everything we didn't ask for.
-    keep = [c.key for c in cd.columns.values() if c.key in out.columns]
-    return out[keep].copy()
+    if cd.layout == "wide":
+        # Wide: drop unaliased columns; we only ship curated ones.
+        keep = [c.key for c in cd.columns.values() if c.key in out.columns]
+        return out[keep].copy()
+    # Transposed: keep period columns intact alongside the renamed metric/unit.
+    return out.copy()
 
 
 def _coerce_dtypes(df: pd.DataFrame, cd: CuratedDataset) -> pd.DataFrame:
@@ -218,8 +227,34 @@ def shape_transposed(
             "metric_label_column — fix the curated YAML."
         )
 
-    label_col = cd.metric_label_column
-    unit_col = cd.unit_column
+    # The YAML's metric_label_column / unit_column refer to source columns.
+    # _apply_aliases has since renamed them to their curated keys, so resolve
+    # the alias here before any df access.
+    label_alias: str | None = None
+    unit_alias: str | None = None
+    label_curated = None
+    for c in cd.columns.values():
+        if c.source_column == cd.metric_label_column:
+            label_alias = c.key
+            label_curated = c
+        if cd.unit_column and c.source_column == cd.unit_column:
+            unit_alias = c.key
+    if label_alias is None:
+        raise ValueError(
+            f"Dataset {cd.id!r} declares metric_label_column "
+            f"{cd.metric_label_column!r} but no curated column matches that "
+            "source_column — fix the YAML so the metric label has a `columns:` entry."
+        )
+    label_col = label_alias
+    unit_col = unit_alias
+
+    # ATO ships some metric labels with stray whitespace (e.g. "Net GST ").
+    # Normalize once so both filter matching and the response display use
+    # clean values, and YAML aliases don't have to mirror typos.
+    if label_col in df.columns:
+        df = df.copy()
+        df[label_col] = df[label_col].astype("string").str.strip()
+
     period_cols = [
         c for c in df.columns
         if c != label_col and c != unit_col
@@ -231,16 +266,8 @@ def shape_transposed(
         ]
 
     # Match measures against the metric label column. Build an alias->canonical
-    # map from the curated `dimension_values` for the metric label column, if any.
+    # map from the curated `dimension_values` for the metric label column.
     metric_alias_map: dict[str, str] | None = None
-    dv = cd.dimension_values.get(cd.columns[label_col].key) if label_col in (c.source_column for c in cd.columns.values()) else None
-    # The label_col here is the source name; the curated key for it is the alias.
-    # Look up by source column name.
-    label_curated = None
-    for c in cd.columns.values():
-        if c.source_column == label_col:
-            label_curated = c
-            break
     if label_curated is not None:
         dv = cd.dimension_values.get(label_curated.key)
         if dv is not None and dv.values is not None:
@@ -307,19 +334,31 @@ def _period_in_range(p: str, start: str | None, end: str | None) -> bool:
 
 
 def _normalize_period(p: str) -> str | None:
-    """Return YYYY or YYYY-MM for comparison, or None if we can't parse it."""
+    """Return YYYY or YYYY-MM for comparison, or None if we can't parse it.
+
+    Disambiguation rule for the `YYYY-NN` shape:
+      - if NN is 01-12, it's a month  → return 'YYYY-MM'
+      - if NN is 13-99, it's the YY suffix of an ATO financial year ('2022-23')
+        → return the starting year 'YYYY'
+      - if NN is 00 or non-numeric, fall through
+    """
     s = p.strip()
     if not s:
         return None
-    # 'YYYY-YY' financial year — use the starting year for comparisons.
+    # 'YYYY-NN' — could be monthly or financial-year. Distinguish by NN.
     if len(s) == 7 and s[4] == "-" and s[:4].isdigit() and s[5:].isdigit():
-        return s[:4]
+        try:
+            suffix = int(s[5:])
+        except ValueError:
+            return None
+        if 1 <= suffix <= 12:
+            return s  # YYYY-MM (month)
+        if 13 <= suffix <= 99:
+            return s[:4]  # YYYY-YY financial year — use start year
+        return None  # NN = 00 isn't a real period
     # 'YYYY-MM-DD HH:MM:SS' (Excel datetime ISO) — take YYYY-MM.
     if len(s) >= 10 and s[4] == "-" and s[7] == "-":
         return s[:7]
-    # 'YYYY-MM'.
-    if len(s) == 7 and s[4] == "-":
-        return s
     # 'YYYY'.
     if len(s) == 4 and s.isdigit():
         return s

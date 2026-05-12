@@ -68,14 +68,15 @@ Every response is the same shape — `dataset_id`, `dataset_name`, `query`, `per
 
 ## Curated datasets (v0.1)
 
-| ID                    | What it is                                                                          | Period           | Coverage              |
-|-----------------------|-------------------------------------------------------------------------------------|------------------|-----------------------|
-| `IND_POSTCODE`        | Personal tax stats by taxable status × state × SA4 × postcode (~5,200 postcodes)    | 2022-23          | 80+ measures          |
-| `IND_POSTCODE_MEDIAN` | Median & average taxable income by postcode, every year                             | 2003-04 → 2022-23| 21 yearly measures    |
-| `COMPANY_INDUSTRY`    | Company tax by ANZSIC broad + fine industry                                         | 2022-23          | 216 industry cells    |
-| `CORP_TRANSPARENCY`   | Entity-level tax disclosure for $100M+ corporations (name, ABN, income, tax)        | 2023-24          | ~4,200 entities       |
-| `SUPER_CONTRIB_AGE`   | Super contributions by age × sex × taxable income bracket                            | 2022-23          | Employer/personal/other |
-| `ACNC_REGISTER`       | Live register of every Australian charity (ABN, size, jurisdiction, beneficiaries)   | Current (weekly) | ~60,000 entities      |
+| ID                    | What it is                                                                          | Period             | Coverage                  |
+|-----------------------|-------------------------------------------------------------------------------------|--------------------|---------------------------|
+| `IND_POSTCODE`        | Personal tax stats by taxable status × state × SA4 × postcode (~5,200 postcodes)    | 2022-23            | 80+ measures              |
+| `IND_POSTCODE_MEDIAN` | Median & average taxable income by postcode, every year                             | 2003-04 → 2022-23  | 21 yearly measures        |
+| `COMPANY_INDUSTRY`    | Company tax by ANZSIC broad + fine industry                                         | 2022-23            | 216 industry cells        |
+| `CORP_TRANSPARENCY`   | Entity-level tax disclosure for $100M+ corporations (name, ABN, income, tax)        | 2023-24            | ~4,200 entities           |
+| `SUPER_CONTRIB_AGE`   | Super contributions by age × sex × taxable income bracket                            | 2022-23            | Employer/personal/other   |
+| `ACNC_REGISTER`       | Live register of every Australian charity (ABN, size, jurisdiction, beneficiaries)   | Current (weekly)   | ~60,000 entities          |
+| `GST_MONTHLY`         | Monthly GST / WET / LCT collections (gross GST, input tax credits, net GST, etc.)   | 2020-07 → 2024-06  | 10 metrics × 48 months    |
 
 Adding a new dataset is a single YAML drop into `src/ato_mcp/data/curated/` — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
