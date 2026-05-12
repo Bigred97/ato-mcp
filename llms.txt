@@ -11,7 +11,7 @@ Six MCP tools — superset of the sister packages (top_n is ato-mcp specific):
 - get_data(dataset_id, filters?, measures?, start_period?, end_period?, format?) -> DataResponse
 - latest(dataset_id, filters?, measures?) -> DataResponse
 - top_n(dataset_id, measure, n=10, filters?, direction="top"|"bottom") -> DataResponse
-- stats(dataset_id, measure, filters?) -> dict (count/sum/mean/median/min/max/stddev)
+- stats(dataset_id, measure, filters?, group_by?) -> dict (count/sum/mean/median/min/max/stddev). When group_by is set, returns per-group stats — e.g. group_by="state" partitions postcode incomes by state in one call.
 - list_curated() -> list[str]
 
 ## Curated datasets (v0.1)

@@ -695,6 +695,28 @@ async def top_n(
     return full.model_copy(update={"records": top, "row_count": len(top)})
 
 
+_STATS_MAX_GROUPS = 200
+
+
+def _summarise(values: list[float]) -> dict[str, float | int]:
+    """Compute the stats payload over a list of non-null numeric values."""
+    if not values:
+        return {"count": 0}
+    import statistics as _stats
+    n = len(values)
+    s_mean = sum(values) / n
+    s_var = sum((v - s_mean) ** 2 for v in values) / n if n > 1 else 0.0
+    return {
+        "count": n,
+        "sum": round(sum(values), 2),
+        "mean": round(s_mean, 2),
+        "median": round(_stats.median(values), 2),
+        "min": round(min(values), 2),
+        "max": round(max(values), 2),
+        "stddev": round(s_var ** 0.5, 4),
+    }
+
+
 @mcp.tool
 async def stats(
     dataset_id: Annotated[
@@ -725,83 +747,140 @@ async def stats(
             ],
         ),
     ] = None,
+    group_by: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Optional dimension key to partition rows by. When set, returns "
+                "per-group statistics instead of a single aggregate. Caps at "
+                "200 groups to keep responses bounded — exceeding the cap returns "
+                "the first 200 groups by row order and sets a `groups_truncated` "
+                "flag in the response."
+            ),
+            examples=["state", "sex", "income_year", "industry_broad"],
+        ),
+    ] = None,
 ) -> dict[str, Any]:
     """Aggregate statistics (count, sum, mean, median, min, max, stddev) for
-    one measure across all rows matching filters.
+    one measure across all rows matching filters. Optionally grouped.
 
-    Collapses the "fetch all rows then compute stats locally" workflow into
-    a single server-side call. The response payload is tiny (8 numbers) even
-    when the underlying dataset has thousands of rows.
+    Without `group_by`: returns one stats payload over all matching rows.
+    With `group_by`: returns per-group stats — much more powerful for
+    "distribution X by Y" queries that would otherwise require N filtered
+    calls.
 
     Examples:
-        # Distribution of NSW postcode median incomes
+        # Single aggregate over NSW postcodes
         stats("IND_POSTCODE_MEDIAN", "median_taxable_income_2022_23",
               filters={"state": "nsw"})
-        # → {count: 587, mean: 61234, median: 58300, min: 17887,
-        #    max: 92216, sum: 35944558, stddev: 11432}
+        # → {statistics: {count: 587, mean: 55017, median: 53484, ...}}
 
-        # How dispersed is corporate income across $100M+ entities?
-        stats("CORP_TRANSPARENCY", "total_income")
-        # → headline distribution of the $100M+ corporate sector
+        # Stats grouped by state — one call instead of 8
+        stats("IND_POSTCODE_MEDIAN", "median_taxable_income_2022_23",
+              group_by="state")
+        # → {by: "state", groups: [
+        #     {key: "ACT", statistics: {...}},
+        #     {key: "NSW", statistics: {...}},
+        #     ...
+        # ]}
+
+        # Tax payable per income year across the corporate sector
+        stats("CORP_TRANSPARENCY", "tax_payable", group_by="income_year")
 
     Returns:
-        Dict with: dataset_id, dataset_name, measure, unit, query echo,
-        and `statistics` containing count + summary stats (mean/median
-        rounded to integer for clean display; stddev kept as float).
+        Without group_by: dict with `statistics` field.
+        With group_by:    dict with `by` and `groups` fields; each group
+                          carries `key`, `statistics`, plus the same envelope
+                          metadata (dataset_id, unit, attribution, etc.).
     """
     if not isinstance(measure, str) or not measure.strip():
         raise ValueError(
             "measure is required and must be a non-empty string. "
             "Use describe_dataset() to see available measure keys."
         )
-    # Reuse the normal data path so all the filter/measure/dtype/validation
+    if group_by is not None and (not isinstance(group_by, str) or not group_by.strip()):
+        raise ValueError(
+            "group_by must be a non-empty string naming a dimension "
+            "(or None / omitted). See describe_dataset() for valid dimensions."
+        )
+
+    # Reuse the normal data path so all filter / measure / dtype / validation
     # work happens for free and the parsed-DataFrame cache is shared.
     resp = await _get_data_impl(
         dataset_id, filters, measure, None, None, "records", last_n=None,
     )
-    values: list[float] = [
-        r.value
-        for r in resp.records
-        if isinstance(r, Observation) and r.value is not None
-    ]
-    if not values:
+
+    if group_by is None:
+        values: list[float] = [
+            r.value
+            for r in resp.records
+            if isinstance(r, Observation) and r.value is not None
+        ]
         return {
             "dataset_id": resp.dataset_id,
             "dataset_name": resp.dataset_name,
             "measure": measure,
             "unit": resp.unit,
             "query": resp.query,
-            "statistics": {"count": 0},
+            "statistics": _summarise(values),
             "source": resp.source,
             "attribution": resp.attribution,
             "ato_url": resp.ato_url,
             "server_version": resp.server_version,
         }
-    import statistics as _stats
-    n = len(values)
-    s_mean = sum(values) / n
-    s_var = sum((v - s_mean) ** 2 for v in values) / n if n > 1 else 0.0
-    s_stddev = s_var ** 0.5
-    return {
+
+    # group_by path: validate the column exists on the dataset, then bucket
+    cd = curated.get(_normalize_dataset_id(dataset_id))
+    if cd is None:
+        # _get_data_impl above would have raised already, but defend anyway
+        raise ValueError(f"Dataset {dataset_id!r} is not a curated ato-mcp dataset.")
+    valid_dim_keys = {c.key for c in cd.columns.values() if c.role in ("dimension", "id")}
+    if group_by not in valid_dim_keys:
+        raise ValueError(
+            f"Unknown group_by {group_by!r} for dataset {cd.id!r}. "
+            f"Try one of: {', '.join(sorted(valid_dim_keys)[:15])}"
+        )
+
+    buckets: dict[str, list[float]] = {}
+    bucket_order: list[str] = []
+    for r in resp.records:
+        if not isinstance(r, Observation) or r.value is None:
+            continue
+        key = r.dimensions.get(group_by)
+        if key is None:
+            continue
+        key_s = str(key)
+        if key_s not in buckets:
+            buckets[key_s] = []
+            bucket_order.append(key_s)
+        buckets[key_s].append(r.value)
+
+    truncated = False
+    if len(bucket_order) > _STATS_MAX_GROUPS:
+        bucket_order = bucket_order[:_STATS_MAX_GROUPS]
+        truncated = True
+
+    groups_out = [
+        {"key": k, "statistics": _summarise(buckets[k])}
+        for k in bucket_order
+    ]
+    out = {
         "dataset_id": resp.dataset_id,
         "dataset_name": resp.dataset_name,
         "measure": measure,
         "unit": resp.unit,
         "query": resp.query,
-        "statistics": {
-            "count": n,
-            "sum": round(sum(values), 2),
-            "mean": round(s_mean, 2),
-            "median": round(_stats.median(values), 2),
-            "min": round(min(values), 2),
-            "max": round(max(values), 2),
-            "stddev": round(s_stddev, 4),
-        },
+        "by": group_by,
+        "groups": groups_out,
         "source": resp.source,
         "attribution": resp.attribution,
         "ato_url": resp.ato_url,
         "server_version": resp.server_version,
     }
+    if truncated:
+        out["groups_truncated"] = True
+        out["groups_truncated_at"] = _STATS_MAX_GROUPS
+    return out
 
 
 @mcp.tool

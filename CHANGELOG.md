@@ -7,22 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 2026-05-13
 
-### Added — `stats` MCP tool (7th tool)
+### Added — `stats` MCP tool (7th tool) with `group_by`
 
-- New tool: `stats(dataset_id, measure, filters?)` returns summary
-  aggregates (count, sum, mean, median, min, max, stddev) for one measure
-  across all rows matching filters. Collapses the
+- New tool: `stats(dataset_id, measure, filters?, group_by?)` returns
+  summary aggregates (count, sum, mean, median, min, max, stddev) for
+  one measure across all rows matching filters. Collapses the
   "fetch-all-then-aggregate-locally" workflow into a single call —
   response payload is tiny (8 numbers) even when the underlying dataset
-  has thousands of rows. Verified outputs:
-  - NSW postcode median income distribution: 587 postcodes, mean $55k,
-    range $17,887 — $92,216, stddev $11,493
-  - Disclosed corporate sector tax payable: 3,027 entities, total $96.1B,
-    mean $31.7M, median $4.5M
-  - HELP debt over 20 years: mean $63B, min $17B (2005-06), max $125B (2024-25)
+  has thousands of rows.
+- `group_by` parameter buckets rows by a dimension before aggregating.
+  Real insights surface in one call:
+  - **By state** (NSW postcode median income): ACT highest ($72k mean),
+    TAS lowest ($50k mean). 587 NSW postcodes vs 24 ACT.
+  - **By sex** (occupation median income): Male $72,408 median vs
+    Female $59,667 — a visible 21% gap.
+  - **By industry** (company total income): Mining $95B/company average
+    (Big-3 distortion), Manufacturing has the most companies (55).
+- Caps at 200 groups to keep responses bounded; flags `groups_truncated`
+  when exceeded (e.g. group_by="postcode" with ~2,300 unique values).
 - Skips null values automatically, so blank-tax-payable entries don't
   drag down the mean of `CORP_TRANSPARENCY`.
-- 11 new tests in `test_stats.py`.
+- 19 new tests in `test_stats.py`.
 
 ### Added — `HELP_DEBT` curated dataset (11th dataset)
 

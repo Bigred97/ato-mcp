@@ -67,7 +67,7 @@ Seven tools, all plain-English in, structured out:
 | `get_data`          | Query with `filters`, `measures`, period range, output format |
 | `latest`            | Last observation per measure (shortcut)                       |
 | `top_n`             | Rank rows by a measure, return top (or bottom) N              |
-| `stats`             | Aggregate stats (count, sum, mean, median, min, max, stddev) over a measure |
+| `stats`             | Aggregate stats (count, sum, mean, median, min, max, stddev) over a measure — optional `group_by` partitions before aggregating |
 | `list_curated`      | Enumerate the curated dataset IDs                             |
 
 Every response is the same shape — `dataset_id`, `dataset_name`, `query`, `period`, `unit`, `row_count`, `records`, `ato_url`, `attribution`, `server_version` — across every curated dataset.
