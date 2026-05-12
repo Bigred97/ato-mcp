@@ -27,6 +27,7 @@ Six MCP tools — superset of the sister packages (top_n is ato-mcp specific):
 - SMSF_FUNDS: Self-managed super fund sector size — total funds, total members, total gross assets (millions AUD) by financial year. 2019-20 to 2024-25 (6 years × 3 metrics). Transposed-layout.
 - SBB_BENCHMARKS: ATO Small Business Benchmarks 2023-24 — industry-specific total-expenses-to-income and cost-of-sales-to-income ratio bands (low/medium/high turnover) for ~100 small-business categories. Tax-advisor / accounting use case.
 - HELP_DEBT: HECS / HELP annual statistics — total outstanding debt, indexation, compulsory + voluntary repayments, write-offs from 2005-06 to 2024-25. 8 measures × 20 years. Headline 2024-25: $125.3B total HECS debt.
+- TAX_GAPS: ATO tax-gap estimates by tax type (personal income, corporate, GST, excise) × financial year. 5 measures incl. tax expected, gross gap, net gap (dollars + rate). Headline 2022-23: $35.5B personal income tax gap (10.3% rate), $58B total missing tax across all categories.
 
 ## Filter shape
 

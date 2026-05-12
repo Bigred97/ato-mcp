@@ -1,0 +1,86 @@
+id: TAX_GAPS
+name: Australian Tax Gap Estimates by Tax Type
+description: |
+  ATO's official estimates of the "tax gap" — the dollar difference between
+  what each tax should have collected (if all taxpayers complied perfectly)
+  and what was actually collected. Headline figures by tax type (personal
+  income, corporate, GST, excise) across multiple financial years, published
+  annually. The fastest answer to "how much tax does the ATO estimate is
+  being missed?" — and at what rate.
+  Source: ATO Australian Tax Gaps dataset on data.gov.au.
+period_coverage: 2016-17 onward (varies by publication year)
+update_frequency: annual
+source_url: https://data.gov.au/data/dataset/australian-tax-gaps
+download_url: https://data.gov.au/data/dataset/f627f458-7d5a-450d-9f62-45d6983961da/resource/59a43b92-26d9-451e-822a-ab437f5a4742/download/australian-tax-gaps-2025-publication.xlsx
+format: xlsx
+sheet: Market Segments Estimates
+header_row: 1
+layout: wide
+cache_kind: data
+search_keywords:
+  - tax gap
+  - unreported tax
+  - tax compliance
+  - shadow economy
+  - personal income tax gap
+  - corporate tax gap
+  - gst gap
+  - tax evasion estimates
+  - tax avoidance estimates
+  - public policy
+  - fintech
+discovery:
+  package_id: australian-tax-gaps
+  resource_name_pattern: '^Australian tax gaps$'
+columns:
+  tax_type:
+    source_column: "Tax Type"
+    description: Tax category (Personal income tax, Corporate income tax, Goods and services tax, Excise and other taxes).
+    role: dimension
+    dtype: string
+  publish_year:
+    source_column: "Publish Year"
+    description: Year the estimate was published.
+    role: dimension
+    dtype: string
+  financial_year:
+    source_column: "Financial Year"
+    description: Financial year the estimate applies to (e.g. "2022-23").
+    role: dimension
+    dtype: string
+  tax_expected_millions:
+    source_column: "Tax expected to be collected ($m)"
+    description: Theoretical tax liability if every taxpayer complied perfectly (millions AUD).
+    unit: AUD millions
+    role: measure
+    dtype: float
+  gross_gap_millions:
+    source_column: "Gross Gap ($m)"
+    description: Gross tax gap — total amount underpaid by all taxpayers before ATO compliance activity (millions AUD).
+    unit: AUD millions
+    role: measure
+    dtype: float
+  net_gap_millions:
+    source_column: "Net Gap ($m)"
+    description: Net tax gap — gross gap minus amounts recovered by ATO compliance activity (millions AUD). The actual remaining shortfall.
+    unit: AUD millions
+    role: measure
+    dtype: float
+  gross_gap_rate:
+    source_column: "Gross Gap %"
+    description: Gross gap as a fraction of theoretical liability (e.g. 0.10 = 10%).
+    unit: ratio
+    role: measure
+    dtype: float
+  net_gap_rate:
+    source_column: "Net Gap%"
+    description: Net gap as a fraction of theoretical liability. The "compliance miss" rate after ATO collection activity.
+    unit: ratio
+    role: measure
+    dtype: float
+dimension_values:
+  tax_type:
+    personal: Personal income tax
+    corporate: Corporate income tax
+    gst: Goods and services tax
+    excise: Excise and other taxes

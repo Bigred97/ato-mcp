@@ -83,3 +83,9 @@ def sbb_benchmarks_xlsx() -> bytes:
 def help_debt_xlsx() -> bytes:
     """ATO HELP / HECS annual debt statistics."""
     return (FIXTURE_DIR / "help_debt.xlsx").read_bytes()
+
+
+@pytest.fixture
+def tax_gaps_xlsx() -> bytes:
+    """ATO Australian Tax Gap estimates by tax type."""
+    return (FIXTURE_DIR / "tax_gaps.xlsx").read_bytes()

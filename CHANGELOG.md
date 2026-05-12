@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 2026-05-13
 
+### Added — `TAX_GAPS` curated dataset (12th dataset)
+
+- ATO's official "tax gap" estimates — the dollar difference between what
+  each tax type should have collected (perfect compliance) and what was
+  actually collected — across 4 tax types × ~7 financial years.
+- Headline 2022-23 figures:
+  - **Personal income tax gap**: $35.5B / 10.3% rate (growing from
+    8.8% in 2017)
+  - **Corporate income tax gap**: $10.8B
+  - **GST gap**: $8.1B
+  - **Excise & other gap**: $3.8B
+  - Total estimated missing tax: **~$58 billion per year**
+- Sellable angles: public-policy researchers, tax-advisory firms,
+  compliance fintech, investigative journalism.
+- 7 new tests in `test_tax_gaps.py` including a "personal > corporate"
+  ordering assertion, a year-over-year growth check, and a rate-under-15%
+  sanity check.
+
 ### Added — `stats` MCP tool (7th tool) with `group_by`
 
 - New tool: `stats(dataset_id, measure, filters?, group_by?)` returns
