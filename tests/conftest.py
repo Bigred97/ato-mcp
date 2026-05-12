@@ -72,3 +72,9 @@ def ato_occupation_xlsx() -> bytes:
 def smsf_annual_overview_xlsx() -> bytes:
     """SMSF Annual Overview — exercises sub-table extraction via max_rows."""
     return (FIXTURE_DIR / "smsf_annual_overview.xlsx").read_bytes()
+
+
+@pytest.fixture
+def sbb_benchmarks_xlsx() -> bytes:
+    """ATO Small Business Benchmarks 2023-24 — 100 industries × ratio columns."""
+    return (FIXTURE_DIR / "sbb_benchmarks.xlsx").read_bytes()

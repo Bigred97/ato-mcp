@@ -1,0 +1,122 @@
+id: SBB_BENCHMARKS
+name: Small Business Benchmarks 2023-24 (ATO Industry Ratios)
+description: |
+  ATO Small Business Benchmarks — industry-specific Total-Expenses and
+  Cost-of-Sales ratio ranges by turnover bracket (low / medium / high)
+  for ~100 small-business categories. Each ratio is a fraction of total
+  income; ATO publishes the typical band each industry should fall into.
+  The fastest way to ask "what should my bakery's expense ratio be?" or
+  "is my client's restaurant within ATO's expected COGS range?".
+  Source: ATO Small Business Benchmarks dataset on data.gov.au.
+period_coverage: 2023-24
+update_frequency: annual
+source_url: https://data.gov.au/data/dataset/small-business-benchmarks
+download_url: https://data.gov.au/data/dataset/591b444b-be7f-4121-8252-119a9fe07c19/resource/db3ab8b7-e029-48de-8e7a-c61532e25496/download/small-business-benchmarks-2023-24-data.xlsx
+format: xlsx
+sheet: Key ratios 2023-24
+header_row: 1
+layout: wide
+cache_kind: data
+search_keywords:
+  - small business benchmarks
+  - industry ratios
+  - cost of sales
+  - total expenses
+  - benchmark cogs
+  - bakery margin
+  - restaurant margin
+  - tradie expenses
+  - accounting
+  - tax advisor
+  - bookkeeping
+  - fintech
+discovery:
+  package_id: small-business-benchmarks
+  resource_name_pattern: '^\d{4}-\d{2} Benchmarks$'
+columns:
+  business_type:
+    source_column: "Small business benchmarks\nKey benchmark ratios based on 2023-24 financial year data\n\nBusinessType"
+    description: Industry / small-business type as classified by the ATO benchmarks.
+    role: dimension
+    dtype: string
+  total_expenses_low_min:
+    source_column: "Total Expenses\n\nLow turnover range minimum"
+    description: Lower bound of total-expenses-to-income ratio for low-turnover businesses in this industry.
+    unit: ratio
+    role: measure
+    dtype: float
+  total_expenses_low_max:
+    source_column: "Total Expenses\n\nLow turnover range maximum"
+    description: Upper bound of total-expenses-to-income ratio for low-turnover businesses.
+    unit: ratio
+    role: measure
+    dtype: float
+  total_expenses_med_min:
+    source_column: "Total Expenses\n\nMedium turnover range minimum"
+    description: Lower bound of total-expenses-to-income ratio for medium-turnover businesses.
+    unit: ratio
+    role: measure
+    dtype: float
+  total_expenses_med_max:
+    source_column: "Total Expenses\n\nMedium turnover range maximum"
+    description: Upper bound of total-expenses-to-income ratio for medium-turnover businesses.
+    unit: ratio
+    role: measure
+    dtype: float
+  total_expenses_high_min:
+    source_column: "Total Expenses\n\nHigh turnover range minimum"
+    description: Lower bound of total-expenses-to-income ratio for high-turnover businesses.
+    unit: ratio
+    role: measure
+    dtype: float
+  total_expenses_high_max:
+    source_column: "Total Expenses\n\nHigh turnover range maximum"
+    description: Upper bound of total-expenses-to-income ratio for high-turnover businesses.
+    unit: ratio
+    role: measure
+    dtype: float
+  cost_of_sales_low_min:
+    source_column: "Cost of Sales\n\nLow turnover range minimum"
+    unit: ratio
+    role: measure
+    dtype: float
+  cost_of_sales_low_max:
+    source_column: "Cost of Sales\n\nLow turnover range maximum"
+    unit: ratio
+    role: measure
+    dtype: float
+  cost_of_sales_med_min:
+    source_column: "Cost of Sales\n\nMedium turnover range minimum"
+    unit: ratio
+    role: measure
+    dtype: float
+  cost_of_sales_med_max:
+    source_column: "Cost of Sales\n\nMedium turnover range maximum"
+    unit: ratio
+    role: measure
+    dtype: float
+  cost_of_sales_high_min:
+    source_column: "Cost of Sales\n\nHigh turnover range minimum"
+    unit: ratio
+    role: measure
+    dtype: float
+  cost_of_sales_high_max:
+    source_column: "Cost of Sales\n\nHigh turnover range maximum"
+    unit: ratio
+    role: measure
+    dtype: float
+  low_turnover_range:
+    source_column: "Low Turnover Range"
+    description: Turnover band for "low" (e.g. "$50,000 - $150,000").
+    role: dimension
+    dtype: string
+  medium_turnover_range:
+    source_column: "Medium Turnover Range"
+    description: Turnover band for "medium" (e.g. "$150,001 - $600,000").
+    role: dimension
+    dtype: string
+  high_turnover_range:
+    source_column: "High Turnover Range"
+    description: Turnover band for "high" (e.g. "More than $600,000").
+    role: dimension
+    dtype: string

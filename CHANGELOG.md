@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 2026-05-12
 
+### Added — `SBB_BENCHMARKS` curated dataset (10th dataset)
+
+- ATO Small Business Benchmarks 2023-24 — industry-specific total-expenses
+  and cost-of-sales ratio bands by turnover bracket (low/medium/high) for
+  ~100 small-business categories. The tax-advisor / accountant
+  fintech goldmine: "is my client's bakery's COGS within ATO's expected
+  range?" → 34–39% for medium-turnover bakeries. Top-expense-ratio
+  industries are predictably low-margin retail: fuel (91%), tobacco (91%),
+  liquor (90%), grocery (88%), tyre retailing (88%).
+- 6 new tests in `test_sbb.py` including a known-value bakery assertion
+  and a top-N low-margin-retail sanity check.
+
 ### Added — `SMSF_FUNDS` curated dataset (9th dataset)
 
 - ATO SMSF Annual Overview Table 1 sub-table 2 — total SMSFs, total
