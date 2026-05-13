@@ -89,3 +89,9 @@ def help_debt_xlsx() -> bytes:
 def tax_gaps_xlsx() -> bytes:
     """ATO Australian Tax Gap estimates by tax type."""
     return (FIXTURE_DIR / "tax_gaps.xlsx").read_bytes()
+
+
+@pytest.fixture
+def rnd_incentive_xlsx() -> bytes:
+    """ATO R&D Tax Incentive entity-level claims."""
+    return (FIXTURE_DIR / "rnd_incentive.xlsx").read_bytes()

@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 2026-05-13
+
+### Added — `RND_INCENTIVE` curated dataset (13th dataset)
+
+- ATO R&D Tax Incentive transparency report — every entity that lodged
+  an R&D claim with their name, ABN/ACN, original notional deduction, and
+  amended figure where applicable. 2022-23 income year, ~13,000 entities.
+- Verified top R&D claimants:
+  - **Atlassian Australia $220.2M** (Australia's biggest R&D spender)
+  - Fortescue Metals $150.8M
+  - Cochlear $136.7M (medtech)
+  - CSL $111.5M (vaccines/pharma)
+  - ResMed $106.7M
+- Sector totals: **$16.5B claimed** across 13,135 entities; mean $1.25M,
+  median $375k.
+- Sellable: startup-due-diligence, fintech, VC research, innovation-policy
+  analysis.
+- 6 new tests in `test_rnd.py` including the "Atlassian top 3" assertion
+  and an $8B-30B total-claims sanity range.
+
 ## [0.2.2] — 2026-05-13
 
 Hardening patch — two additional audit findings addressed.

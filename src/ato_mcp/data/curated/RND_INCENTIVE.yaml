@@ -1,0 +1,63 @@
+id: RND_INCENTIVE
+name: R&D Tax Incentive — Entity-Level R&D Claims (2022-23)
+description: |
+  ATO Research and Development Tax Incentive transparency report — every
+  entity that lodged an R&D claim with their name, ABN/ACN, original
+  notional deduction, and (if applicable) the amended figure. ~13,000
+  entities for the 2022-23 income year. The single-call answer to
+  "how much R&D did company X claim?" — fintech-due-diligence, startup
+  research, public-policy and innovation-policy use cases all benefit.
+  Source: ATO R&D Tax Incentive dataset on data.gov.au.
+period_coverage: 2022-23
+update_frequency: annual
+source_url: https://data.gov.au/data/dataset/research-and-development-tax-incentive
+download_url: https://data.gov.au/data/dataset/7c356598-b048-4c1e-862f-c936041e3d81/resource/e9c059c8-a801-4068-844e-9d4ee84a1d81/download/report-of-information-about-research-and-development-tax-incentive-entities.xlsx
+format: xlsx
+sheet: 2022-23 Report
+header_row: 1
+layout: wide
+cache_kind: data
+search_keywords:
+  - r&d
+  - research and development
+  - rdti
+  - r&d tax incentive
+  - innovation policy
+  - startup funding
+  - r&d claim
+  - notional deduction
+  - canva r&d
+  - atlassian r&d
+  - fintech r&d
+  - australia innovation
+discovery:
+  package_id: research-and-development-tax-incentive
+  resource_name_pattern: '^\d{4}-\d{2} Report of (data|information) about [Rr]esearch and [Dd]evelopment'
+columns:
+  company_name:
+    source_column: "Company name"
+    description: Legal company name as registered with the ATO.
+    role: dimension
+    dtype: string
+  abn:
+    source_column: "ABN/ACN"
+    description: 11-digit Australian Business Number (or 9-digit ACN for some entities).
+    role: id
+    dtype: string
+  rnd_expenditure_aud:
+    source_column: "Total R&D expenditure (notional deductions less feedstock adjustments) $"
+    description: Total R&D expenditure as a notional deduction, net of feedstock adjustments. The original figure reported on the claim.
+    unit: AUD
+    role: measure
+    dtype: float
+  rnd_amended_expenditure_aud:
+    source_column: "Total amended R&D expenditure (notional deductions less feedstock adjustments) $"
+    description: Amended R&D expenditure (where the entity later corrected the original figure). Null for most entities.
+    unit: AUD
+    role: measure
+    dtype: float
+  income_year:
+    source_column: "Income Year"
+    description: Financial year of the R&D claim.
+    role: dimension
+    dtype: string
