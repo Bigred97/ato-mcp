@@ -66,32 +66,63 @@ class Cache:
             await conn.executescript(_SCHEMA)
             await conn.commit()
 
+    async def _reset_for_corruption(self) -> None:
+        """Drop the DB file and force re-init on next access. Used when an
+        operation raises sqlite3.DatabaseError mid-session — the file may
+        have been corrupted by disk failure, partial truncation, or external
+        tampering. Resetting is always safe because the cache is a perf
+        layer, not a source of truth."""
+        self._initialized = False
+        self.db_path.unlink(missing_ok=True)
+
     async def get(self, key: str, ttl: timedelta) -> bytes | None:
         await self._ensure_init()
         cutoff = time.time() - ttl.total_seconds()
-        async with aiosqlite.connect(self.db_path) as conn:
-            async with conn.execute(
-                "SELECT payload FROM http_cache WHERE cache_key = ? AND cached_at >= ?",
-                (key, cutoff),
-            ) as cur:
-                row = await cur.fetchone()
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                async with conn.execute(
+                    "SELECT payload FROM http_cache WHERE cache_key = ? AND cached_at >= ?",
+                    (key, cutoff),
+                ) as cur:
+                    row = await cur.fetchone()
+        except sqlite3.DatabaseError:
+            # Mid-session corruption — drop and recreate, then return None
+            # (treat as cache miss). Callers re-fetch from origin.
+            await self._reset_for_corruption()
+            await self._ensure_init()
+            return None
         return row[0] if row else None
 
     async def set(self, key: str, value: bytes, kind: CacheKind) -> None:
         await self._ensure_init()
-        async with aiosqlite.connect(self.db_path) as conn:
-            await conn.execute(
-                """
-                INSERT INTO http_cache (cache_key, payload, cached_at, kind)
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT(cache_key) DO UPDATE SET
-                    payload = excluded.payload,
-                    cached_at = excluded.cached_at,
-                    kind = excluded.kind
-                """,
-                (key, value, time.time(), kind),
-            )
-            await conn.commit()
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO http_cache (cache_key, payload, cached_at, kind)
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT(cache_key) DO UPDATE SET
+                        payload = excluded.payload,
+                        cached_at = excluded.cached_at,
+                        kind = excluded.kind
+                    """,
+                    (key, value, time.time(), kind),
+                )
+                await conn.commit()
+        except sqlite3.DatabaseError:
+            # Mid-session corruption — recreate and retry once. If the retry
+            # also fails, the disk is genuinely broken and we propagate.
+            await self._reset_for_corruption()
+            await self._ensure_init()
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO http_cache (cache_key, payload, cached_at, kind)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (key, value, time.time(), kind),
+                )
+                await conn.commit()
 
     async def clear(self, kind: CacheKind | None = None) -> None:
         await self._ensure_init()

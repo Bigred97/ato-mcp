@@ -129,6 +129,10 @@ def _is_data_gov_au(url: str) -> bool:
     return host == "data.gov.au" or host.endswith(".data.gov.au")
 
 
+_PACKAGE_SEARCH_PAGE = 200
+_PACKAGE_SEARCH_MAX_PAGES = 10   # 2,000 packages per org is well past any realistic count
+
+
 async def _resolve_latest_package_id(
     client: ATOClient, spec: DiscoverySpec
 ) -> str:
@@ -138,43 +142,62 @@ async def _resolve_latest_package_id(
         )
     assert spec.package_id_pattern is not None  # checked above
 
-    # Use the CKAN search endpoint via fetch_package's machinery — we share
-    # the catalog cache TTL, so repeated lookups are cheap.
-    url = (
-        f"{client.base_url}/data/api/3/action/package_search"
-        f"?fq=organization:{spec.organization_id}&rows=200&fl=name"
-    )
-    try:
-        body = await client._fetch_cached(url, kind="catalog")  # type: ignore[attr-defined]
-    except ATOAPIError as e:
-        raise DiscoveryError(f"failed to list packages: {e}") from e
-
-    try:
-        import json
-        payload = json.loads(body.decode("utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError) as e:
-        raise DiscoveryError(f"package_search returned non-JSON: {e}") from e
-
-    if not payload.get("success"):
-        raise DiscoveryError(f"package_search failed: {payload.get('error')}")
-
-    results = (payload.get("result") or {}).get("results") or []
+    # Page through the CKAN search endpoint until we've collected every
+    # package belonging to this org. data.gov.au returns `count` in the
+    # result envelope so we know when to stop. Cached at the byte level
+    # so repeated lookups are cheap.
+    import json
     pattern = re.compile(spec.package_id_pattern)
     matches: list[tuple[int, str]] = []
-    for entry in results:
-        name = entry.get("name") if isinstance(entry, dict) else None
-        if not isinstance(name, str):
-            continue
-        m = pattern.match(name)
-        if not m:
-            continue
-        # First numeric capture group → year
-        year_str = m.group(1) if m.groups() else None
+    seen = 0
+    total: int | None = None
+
+    for page_idx in range(_PACKAGE_SEARCH_MAX_PAGES):
+        start = page_idx * _PACKAGE_SEARCH_PAGE
+        url = (
+            f"{client.base_url}/data/api/3/action/package_search"
+            f"?fq=organization:{spec.organization_id}"
+            f"&rows={_PACKAGE_SEARCH_PAGE}&start={start}&fl=name"
+        )
         try:
-            year = int(year_str) if year_str else 0
-        except (TypeError, ValueError):
-            year = 0
-        matches.append((year, name))
+            body = await client._fetch_cached(url, kind="catalog")  # type: ignore[attr-defined]
+        except ATOAPIError as e:
+            raise DiscoveryError(f"failed to list packages: {e}") from e
+
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            raise DiscoveryError(f"package_search returned non-JSON: {e}") from e
+
+        if not payload.get("success"):
+            raise DiscoveryError(f"package_search failed: {payload.get('error')}")
+
+        result = payload.get("result") or {}
+        results = result.get("results") or []
+        if total is None:
+            total = result.get("count")
+            if not isinstance(total, int):
+                total = None
+
+        for entry in results:
+            name = entry.get("name") if isinstance(entry, dict) else None
+            if not isinstance(name, str):
+                continue
+            seen += 1
+            m = pattern.match(name)
+            if not m:
+                continue
+            # First numeric capture group → year
+            year_str = m.group(1) if m.groups() else None
+            try:
+                year = int(year_str) if year_str else 0
+            except (TypeError, ValueError):
+                year = 0
+            matches.append((year, name))
+
+        # Stop once we've collected every package for this org.
+        if not results or (total is not None and seen >= total):
+            break
 
     if not matches:
         raise DiscoveryError(

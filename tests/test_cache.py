@@ -105,6 +105,35 @@ async def test_concurrent_writes_dont_corrupt(temp_db: Path):
 
 
 @pytest.mark.asyncio
+async def test_mid_session_corruption_recovery_on_get(temp_db: Path):
+    """Audit fix: if the SQLite file is corrupted AFTER cache is initialized,
+    .get() must recover by dropping and recreating, returning a cache miss
+    instead of raising DatabaseError to the caller."""
+    cache = Cache(temp_db)
+    await cache.set("warm_key", b"warm", kind="data")
+    assert await cache.get("warm_key", ttl=timedelta(hours=1)) == b"warm"
+
+    # Corrupt the DB file mid-session
+    temp_db.write_bytes(b"\x00\x01garbage\xffnot a sqlite file" * 200)
+
+    got = await cache.get("warm_key", ttl=timedelta(hours=1))
+    assert got is None  # cache miss, but no exception
+    # DB is usable again
+    await cache.set("after_corruption", b"new", kind="data")
+    assert await cache.get("after_corruption", ttl=timedelta(hours=1)) == b"new"
+
+
+@pytest.mark.asyncio
+async def test_mid_session_corruption_recovery_on_set(temp_db: Path):
+    """Same recovery path on the set() side."""
+    cache = Cache(temp_db)
+    await cache.set("k1", b"v1", kind="data")
+    temp_db.write_bytes(b"\x00\x01garbage\xff" * 200)
+    await cache.set("k2", b"v2", kind="data")  # must not raise
+    assert await cache.get("k2", ttl=timedelta(hours=1)) == b"v2"
+
+
+@pytest.mark.asyncio
 async def test_ttl_constants_defined():
     """All declared cache kinds must have a TTL."""
     for kind in ("data", "latest", "register", "catalog"):

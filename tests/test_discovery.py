@@ -167,6 +167,69 @@ async def test_resolve_with_exact_package_id_and_name(fresh_cache: Cache):
 
 @pytest.mark.asyncio
 @respx.mock
+async def test_resolve_with_package_pattern_paginates(fresh_cache: Cache):
+    """Audit fix: if an org has more packages than fit in one CKAN page
+    (200), discovery must paginate to find the latest year. Otherwise the
+    freshest release could sit on page 2 and never be reached."""
+    # Page 1 (start=0): 200 packages, none matching
+    page_1 = {
+        "success": True,
+        "result": {
+            "count": 250,
+            "results": (
+                [{"name": f"filler-package-{i}"} for i in range(199)]
+                + [{"name": "taxation-statistics-2021-22"}]
+            ),
+        },
+    }
+    # Page 2 (start=200): 50 packages, latest year on this page
+    page_2 = {
+        "success": True,
+        "result": {
+            "count": 250,
+            "results": (
+                [{"name": f"other-package-{i}"} for i in range(49)]
+                + [{"name": "taxation-statistics-2023-24"}]
+            ),
+        },
+    }
+    package_show = {
+        "success": True,
+        "result": {
+            "name": "taxation-statistics-2023-24",
+            "resources": [
+                {"name": "Individuals - Table 6", "url": "https://data.gov.au/data/x/t6.xlsx"},
+            ],
+        },
+    }
+
+    def search_handler(request):
+        url = str(request.url)
+        if "start=200" in url:
+            return httpx.Response(200, json=page_2)
+        return httpx.Response(200, json=page_1)
+
+    respx.get(
+        url__startswith="https://data.gov.au/data/api/3/action/package_search",
+    ).mock(side_effect=search_handler)
+    respx.get(
+        url__startswith="https://data.gov.au/data/api/3/action/package_show",
+    ).mock(return_value=httpx.Response(200, json=package_show))
+
+    async with ATOClient(cache=fresh_cache) as client:
+        url = await resolve_latest_url(
+            client,
+            DiscoverySpec(
+                organization_id="australiantaxationoffice",
+                package_id_pattern=r"^taxation-statistics-(\d{4})-\d{2}$",
+                resource_name="Individuals - Table 6",
+            ),
+        )
+    assert url == "https://data.gov.au/data/x/t6.xlsx"
+
+
+@pytest.mark.asyncio
+@respx.mock
 async def test_resolve_with_package_pattern_picks_latest_year(fresh_cache: Cache):
     # First call: package_search returns multiple packages
     respx.get(
@@ -175,6 +238,7 @@ async def test_resolve_with_package_pattern_picks_latest_year(fresh_cache: Cache
         return_value=httpx.Response(200, json={
             "success": True,
             "result": {
+                "count": 4,
                 "results": [
                     {"name": "taxation-statistics-2020-21"},
                     {"name": "taxation-statistics-2022-23"},

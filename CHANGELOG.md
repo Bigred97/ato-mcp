@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] — 2026-05-13
+
+Hardening patch — two additional audit findings addressed.
+
+### Hardening
+
+- **Cache mid-session corruption recovery.** Previously, if the SQLite
+  cache file got corrupted *after* the cache was initialised (disk error,
+  external truncation, etc.), every subsequent `get`/`set` raised
+  `sqlite3.DatabaseError`. Now both methods catch the error, drop and
+  recreate the DB, and either return a cache miss (`get`) or retry the
+  write (`set`). The cache is a perf layer not a source of truth, so
+  losing its contents on corruption is always safe.
+- **Discovery now paginates `package_search`.** Was hardcoded to
+  `rows=200` — if data.gov.au's ATO org grows past 200 packages, the
+  freshest yearly release could sit on page 2 and never be matched.
+  Now walks up to 10 pages (2,000 packages) and stops when `count`
+  signals the end. Tests cover the multi-page case.
+
+### Tests
+- 282 unit + 13 live = 295 total (+3 regression tests).
+- Ruff still clean.
+
 ## [0.2.1] — 2026-05-13
 
 Patch release — two bug fixes surfaced by a deliberate code audit after v0.2.0.
