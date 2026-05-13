@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] — 2026-05-13
+
+### First PyPI release via Trusted Publishing (OIDC)
+
+- No code changes vs `v0.2.2`. This release exists to fire the `release.yml`
+  workflow (which was added after `v0.2.2` was tagged) and publish the wheel
+  to PyPI for the first time, using PyPI's OpenID Connect trusted-publisher
+  flow — no long-lived API tokens in the repo.
+- 288 unit tests + 13 live tests remain green.
+- Install: `uvx --upgrade ato-mcp`.
+
 ## [Unreleased] — 2026-05-13
 
 ### Added — `RND_INCENTIVE` curated dataset (13th dataset)
