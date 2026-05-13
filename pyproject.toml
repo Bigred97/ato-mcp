@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ato-mcp"
-version = "0.2.0"
+version = "0.2.1"
 description = "MCP server for Australian Taxation Office statistics. Plain-English access to personal tax by postcode, company tax by industry, corporate tax transparency, GST collections, super contributions, and the ACNC charity register."
 readme = "README.md"
 requires-python = ">=3.11"

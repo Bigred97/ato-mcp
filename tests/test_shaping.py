@@ -205,6 +205,65 @@ def test_empty_list_filter_raises(corp_transparency_xlsx):
         )
 
 
+def test_latest_on_wide_dataset_does_not_arbitrarily_trim(ind_postcode_median_xlsx):
+    """Regression: latest() (last_n=1) on a WIDE dataset with multiple matching
+    rows used to trim per-measure to 1 random row. Now it should preserve
+    all rows because there's no time dimension to "be latest" on.
+
+    Audit bug #1: trimming when every record has period=None makes no sense —
+    `latest()` on a wide-layout dataset should behave like `get_data()`.
+    """
+    cd = curated.get("IND_POSTCODE_MEDIAN")
+    df = parsing.read_xlsx(
+        ind_postcode_median_xlsx, sheet=cd.sheet, header_row=cd.header_row,
+    )
+    df = parsing.drop_blank_rows(
+        df, [c.source_column for c in cd.columns.values() if c.role == "dimension"],
+    )
+    # Without last_n
+    resp_full = shaping.build_response(
+        cd=cd, df=df,
+        filters={"state": "nsw"},
+        measures="median_taxable_income_2022_23",
+        start_period=None, end_period=None, fmt="records", user_query={},
+        last_n=None,
+    )
+    # With last_n=1 (what latest() passes)
+    resp_latest = shaping.build_response(
+        cd=cd, df=df,
+        filters={"state": "nsw"},
+        measures="median_taxable_income_2022_23",
+        start_period=None, end_period=None, fmt="records", user_query={},
+        last_n=1,
+    )
+    # The wide layout has no time dimension — latest must NOT trim
+    assert resp_latest.row_count == resp_full.row_count, (
+        f"latest trimmed wide-layout records: {resp_latest.row_count} vs "
+        f"full {resp_full.row_count}"
+    )
+
+
+def test_latest_on_corp_transparency_keeps_all_measures(corp_transparency_xlsx):
+    """latest() filter on entity_name with measures=None should return all 3
+    measures (total_income, taxable_income, tax_payable) — not 1 arbitrary one."""
+    cd = curated.get("CORP_TRANSPARENCY")
+    df = parsing.read_xlsx(
+        corp_transparency_xlsx, sheet=cd.sheet, header_row=cd.header_row,
+    )
+    df = parsing.drop_blank_rows(
+        df, [c.source_column for c in cd.columns.values() if c.role == "dimension"],
+    )
+    resp = shaping.build_response(
+        cd=cd, df=df,
+        filters={"entity_name": "BHP IRON ORE (JIMBLEBAR) PTY LTD"},
+        measures=None,
+        start_period=None, end_period=None, fmt="records", user_query={},
+        last_n=1,
+    )
+    measures = {r.measure for r in resp.records}
+    assert measures == {"total_income", "taxable_income", "tax_payable"}
+
+
 def test_response_carries_metadata(corp_transparency_xlsx):
     cd = curated.get("CORP_TRANSPARENCY")
     df = _parse(cd, corp_transparency_xlsx)

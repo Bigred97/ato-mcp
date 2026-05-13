@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] — 2026-05-13
+
+Patch release — two bug fixes surfaced by a deliberate code audit after v0.2.0.
+
+### Bug fixes
+
+- **`latest()` no longer arbitrarily trims wide-layout results.** Calling
+  `latest()` on a wide-layout dataset (any of IND_POSTCODE, IND_POSTCODE_MEDIAN,
+  COMPANY_INDUSTRY, etc. — datasets with no time dimension) used to pick a
+  single arbitrary row per measure when `last_n=1` was applied. Now the trim
+  is skipped when every record has `period=None`. `latest()` on a wide
+  dataset == `get_data()` (same query, same shape). Transposed-layout
+  datasets (GST_MONTHLY, SMSF_FUNDS) still get proper most-recent trimming.
+- **`end_period="2024"` against monthly data now correctly includes 2024-NN.**
+  Naive string comparison `"2024-06" > "2024"` returned True, excluding
+  every month of the year you asked for. Fixed by right-padding short
+  end-period normalisations to "YYYY-99" when the period under test has a
+  month component — so `end_period="2024"` against `period="2024-06"` now
+  includes the row.
+
+### Tests
+- 279 unit + 13 live = 292 total. 3 new regression tests for the audit fixes.
+
 ## [0.2.0] — 2026-05-13
 
 Six new curated datasets, two new tools, plus performance and security

@@ -163,6 +163,39 @@ def test_gst_monthly_unknown_measure_lists_alternatives(gst_monthly_xlsx):
     assert "net_gst" in str(exc_info.value)
 
 
+def test_period_in_range_end_year_includes_all_months(gst_monthly_xlsx):
+    """Regression: end_period='2024' against monthly data must INCLUDE
+    every 2024-NN row. A naive string compare excluded them (audit bug #3).
+    """
+    cd = curated.get("GST_MONTHLY")
+    df = _parse(cd, gst_monthly_xlsx)
+    resp = shaping.build_response(
+        cd=cd, df=df, filters={}, measures="net_gst",
+        start_period="2024", end_period="2024",
+        fmt="records", user_query={},
+    )
+    # 2024 only — there should be at least one record (Jan-Jun 2024 in the
+    # 2022-23 file, since the GST monthly table goes to 2024-06).
+    assert resp.row_count >= 1
+    # Every record's period must start with 2024
+    for r in resp.records:
+        assert r.period.startswith("2024"), f"unexpected period: {r.period}"
+
+
+def test_period_in_range_end_year_includes_dec(gst_monthly_xlsx):
+    """end_period='2023' should include 2023-12 (December 2023)."""
+    cd = curated.get("GST_MONTHLY")
+    df = _parse(cd, gst_monthly_xlsx)
+    resp = shaping.build_response(
+        cd=cd, df=df, filters={}, measures="net_gst",
+        start_period="2023-12", end_period="2023",
+        fmt="records", user_query={},
+    )
+    # start=2023-12 and end=2023 (whole year) — December 2023 must be in range
+    periods = {r.period[:7] for r in resp.records}
+    assert "2023-12" in periods, f"got periods: {periods}"
+
+
 def test_period_normalize_disambiguates_month_vs_financial_year():
     from ato_mcp.shaping import _normalize_period
     # Months: YY <= 12

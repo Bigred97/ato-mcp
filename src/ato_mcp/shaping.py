@@ -317,8 +317,14 @@ def _period_in_range(p: str, start: str | None, end: str | None) -> bool:
 
     ATO periods come in many shapes: 'YYYY' (2024), 'YYYY-YY' (2022-23),
     'YYYY-MM-DD HH:MM:SS' (Excel datetime stringified for monthly tables),
-    'YYYY-MM' (rare). We try to extract a year + optional month and compare
-    lexicographically. Free-form / unparseable periods always pass through.
+    'YYYY-MM' (rare). We extract YYYY or YYYY-MM and compare lexicographically.
+    Free-form / unparseable periods always pass through.
+
+    Boundary semantic: `end_period="2024"` against a monthly source must INCLUDE
+    all of 2024-NN. A naive string compare `"2024-06" > "2024"` returns True
+    (excluding June), so we right-pad shorter end normalisations to the
+    widest match in their granularity (e.g. "2024" → "2024-12" when the
+    period under test has a month component).
     """
     norm = _normalize_period(p)
     if norm is None:
@@ -329,8 +335,14 @@ def _period_in_range(p: str, start: str | None, end: str | None) -> bool:
             return False
     if end:
         ne = _normalize_period(end)
-        if ne is not None and norm > ne:
-            return False
+        if ne is not None:
+            # If end is year-only but the period has a month, treat end as
+            # the LAST month of that year so 2024-NN ≤ 2024 means "any month
+            # within or before 2024".
+            if len(ne) == 4 and len(norm) > 4:
+                ne = ne + "-99"
+            if norm > ne:
+                return False
     return True
 
 
@@ -451,16 +463,25 @@ def build_response(
         # the freshest values regardless of source-file row order (the SMSF
         # overview lists years descending; the GST monthly table lists them
         # ascending — both need to land on "newest" when last_n=1).
-        per_measure: dict[str, list[Observation]] = {}
-        for r in records:
-            per_measure.setdefault(r.measure or "", []).append(r)
-        records = []
-        for k, group in per_measure.items():
-            group_sorted = sorted(
-                group,
-                key=lambda r: _normalize_period(r.period or "") or "",
-            )
-            records.extend(group_sorted[-last_n:])
+        #
+        # SKIP the trim entirely if every record has a null period — that's
+        # the wide-layout case (single-year tables like IND_POSTCODE_MEDIAN).
+        # Trimming there would arbitrarily pick one row per measure based on
+        # iteration order, which is never what the caller wants. `latest()`
+        # on a wide dataset == get_data() (same filter, same shape).
+        if all(r.period is None for r in records):
+            pass  # no trim
+        else:
+            per_measure: dict[str, list[Observation]] = {}
+            for r in records:
+                per_measure.setdefault(r.measure or "", []).append(r)
+            records = []
+            for k, group in per_measure.items():
+                group_sorted = sorted(
+                    group,
+                    key=lambda r: _normalize_period(r.period or "") or "",
+                )
+                records.extend(group_sorted[-last_n:])
 
     response_unit: str | None = None
     if records:
