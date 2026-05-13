@@ -76,6 +76,68 @@ All values below were verified live against `data.gov.au` on 2026-05-12. If your
 
 **Expected**: One row per (age × sex × income bracket) — Claude divides total $ by count to derive the per-person average. Tool: `ato:get_data` on `SUPER_CONTRIB_AGE`.
 
+## 6b. SMSF sector size
+
+> How big is the Australian self-managed super fund sector right now? Show me total funds, members, and assets for the latest year, plus how the sector has grown since 2019-20.
+
+**Expected**: 2024-25 latest: **653,062 SMSFs**, 1.2M members, **$1.05 trillion** in assets. Grown $29B since 2019-20. Tool: `ato:get_data` on `SMSF_FUNDS`.
+
+---
+
+## 7. HECS / HELP — student debt
+
+> What's the total outstanding HECS/HELP debt in Australia, and how much has been repaid by graduates voluntarily vs compulsorily in the latest year?
+
+**Expected**: 2024-25 — total HELP debt **$125.3B**, compulsory repayments **$52.1B**, voluntary repayments **$11.8B** (from 9.17M voluntary repayments). Tool: `ato:get_data` on `HELP_DEBT` filtered to 2024-25.
+
+## 7b. HECS debt growth trajectory (uses `stats`)
+
+> What's the range, mean, and median of total HELP debt over the last 20 years?
+
+**Expected**: Min $17B (2005-06), max $125B (2024-25), mean ~$63B. Tool: `ato:stats("HELP_DEBT", "total_debt_aud")` — one call, eight numbers.
+
+---
+
+## 8. Tax-advisor / accountant — Small Business Benchmarks
+
+> What's the typical total-expenses-to-income ratio for a medium-turnover bakery in Australia? My client's bakery is at 78% — is that within ATO's expected range?
+
+**Expected**: Medium-turnover bakeries: 75–86% total expenses, 34–39% COGS. 78% is well inside the band. Tool: `ato:get_data` on `SBB_BENCHMARKS` filtered to "Bakeries and hot bread shops".
+
+## 8b. Highest-margin industries
+
+> Which small-business industries have the LOWEST total-expense ratios (so highest gross margins)? Rank them.
+
+**Expected**: Professional services, architectural services, IT consulting typically lead. Tool: `ato:top_n("SBB_BENCHMARKS", "total_expenses_med_min", n=10, direction="bottom")`.
+
+---
+
+## 9. Public-policy / journalism — tax gaps
+
+> How much tax does the ATO estimate is going uncollected in Australia each year? Break it down by tax type for 2022-23 and rank by dollar amount.
+
+**Expected**: Personal income tax **$35.5B** (10.3% gap rate), Corporate income tax $10.8B, GST $8.1B, Excise $3.8B — total **~$58 billion / year** estimated missing. Tool: `ato:get_data` on `TAX_GAPS` filtered to 2022-23.
+
+## 9b. Has the personal income tax gap been growing? (uses `stats group_by`)
+
+> Trace the trend in the personal income tax gap rate over time. Has it gone up or down since 2017?
+
+**Expected**: Rate climbed from 8.8% (2017-18) to 10.3% (2022-23). Tool: `ato:get_data("TAX_GAPS", filters={"tax_type": "personal"})` or `ato:stats("TAX_GAPS", "net_gap_rate", group_by="financial_year", filters={"tax_type": "personal"})`.
+
+---
+
+## 10. Aggregation queries (showcase `stats`)
+
+> Across all NSW postcodes, what's the mean, median, min, and max of 2022-23 median taxable income?
+
+**Expected**: 587 postcodes, mean $55k, median $53.5k, min $17.9k (student-heavy), max $92k (inner-west / eastern suburbs). Tool: `ato:stats("IND_POSTCODE_MEDIAN", "median_taxable_income_2022_23", filters={"state": "nsw"})`.
+
+## 10b. Same query, but grouped by state (showcase `group_by`)
+
+> Compare the distribution of postcode-level median taxable incomes across every state and territory. Which state has the highest mean? The lowest? How dispersed is each?
+
+**Expected**: ACT highest mean ($72k, 24 postcodes), TAS lowest ($50k, 97 postcodes), NSW the largest sample (587). Tool: `ato:stats("IND_POSTCODE_MEDIAN", "median_taxable_income_2022_23", group_by="state")` — one call, all 8 states' distributions.
+
 ---
 
 ## Multi-server combos

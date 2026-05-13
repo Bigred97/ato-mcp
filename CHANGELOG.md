@@ -5,7 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — 2026-05-13
+## [0.2.0] — 2026-05-13
+
+Six new curated datasets, two new tools, plus performance and security
+upgrades since v0.1.0. Highlights:
+
+- **12 curated datasets** (up from 10): added GST_MONTHLY, ATO_OCCUPATION,
+  SMSF_FUNDS, SBB_BENCHMARKS, HELP_DEBT, TAX_GAPS.
+- **7 MCP tools** (up from 5): added `top_n` (ranking) and `stats` (with
+  `group_by` for grouped aggregates).
+- **132× warm-hit speedup** on the largest dataset via the parsed-DataFrame
+  in-process cache.
+- **Discovery host pin**: refuses any URL whose host isn't data.gov.au.
+- **Ruff lint pass** + CI lint gate.
 
 ### Added — `TAX_GAPS` curated dataset (12th dataset)
 
