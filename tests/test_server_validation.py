@@ -133,3 +133,29 @@ async def test_list_curated_returns_sorted_ids():
     ids = server.list_curated()
     assert ids == sorted(ids)
     assert "CORP_TRANSPARENCY" in ids
+
+
+# --- Int-year coercion (Wave 1 interop fix) ----------------------------------
+
+def test_validate_period_accepts_int_year():
+    """Bare int years are coerced to 'YYYY' string at the boundary."""
+    assert server._validate_period(2024, "start_period") == "2024"
+    assert server._validate_period(2020, "end_period") == "2020"
+    assert server._validate_period(1907, "start_period") == "1907"
+    assert server._validate_period(2100, "end_period") == "2100"
+
+
+def test_validate_period_int_out_of_range_raises_helpful():
+    """Out-of-range int years raise with a useful hint, not a TypeError."""
+    with pytest.raises(ValueError, match="out of range"):
+        server._validate_period(1800, "start_period")
+    with pytest.raises(ValueError, match="out of range"):
+        server._validate_period(2200, "end_period")
+    with pytest.raises(ValueError, match="YYYY"):
+        server._validate_period(99, "start_period")
+
+
+def test_validate_period_rejects_bool_with_hint():
+    """bool is a subclass of int but must NOT be coerced silently."""
+    with pytest.raises(ValueError, match="bool"):
+        server._validate_period(True, "start_period")

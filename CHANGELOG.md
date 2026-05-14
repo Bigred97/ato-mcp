@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-05-15
+
+### Added — Wave 1 portfolio interoperability fix (int-year coercion)
+
+Cross-sister consistency pass on input handling identified in the portfolio
+interoperability audit.
+
+- **Int-year coercion in period validation.** `start_period=2024` (a bare
+  JSON int) now coerces to `"2024"` instead of raising a TypeError-style
+  message. LLM clients routinely send JSON ints; this removes a confusing
+  failure mode that surfaced as `must be a string, got int`. Out-of-range
+  ints (e.g. `12345`, `1800`) still raise — with a hint pointing at the
+  canonical `'YYYY'` / `'YYYY-MM'` / `'YYYY-YY'` (ATO FY) forms. `bool` is
+  explicitly rejected (it's a subclass of int) to avoid silent coercion.
+- **Type signature broadened** on `get_data`'s `start_period` /
+  `end_period` to `str | int | None` so the tool's published schema
+  reflects the new coercion behaviour.
+
+3 new unit tests in `tests/test_server_validation.py` cover the coercion
+boundary, the out-of-range hint, and the bool-subclass-of-int guard.
+
+### Backward compatibility
+
+No breaking changes. Inputs that previously raised a type error on bare
+int years now succeed; every other input still validates as before.
+
 ## [0.4.0] — 2026-05-15
 
 ### Added — aus-identity integration
