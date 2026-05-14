@@ -10,13 +10,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@v5
       - name: Run ruff check
-        # `uvx` runs ruff in an isolated managed env; avoids PEP 668
-        # "externally-managed environment" failure on Ubuntu 23.04+ runners
-        # that the previous `uv pip install --system` hit.
         run: uvx "ruff>=0.5" check src/ tests/
 
   test:
@@ -27,7 +22,7 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v5
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
@@ -45,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v5
       - name: Install uv
         uses: astral-sh/setup-uv@v7
       - name: Build wheel + sdist
@@ -54,7 +49,7 @@ jobs:
         run: |
           uv run --isolated --with ./dist/*.whl python -c \
             "import ato_mcp.server as s; n = len(s.list_curated()); assert n >= 8, f'expected >=8 curated, got {n}'; print(f'OK ({n} curated datasets)')"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: dist
           path: dist/
