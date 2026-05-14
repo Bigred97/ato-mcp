@@ -74,7 +74,7 @@ Every response is the same shape — `dataset_id`, `dataset_name`, `query`, `per
 
 ---
 
-## Curated datasets (13)
+## Curated datasets (14)
 
 | ID                    | What it is                                                                          | Period             | Coverage                  |
 |-----------------------|-------------------------------------------------------------------------------------|--------------------|---------------------------|
@@ -91,6 +91,7 @@ Every response is the same shape — `dataset_id`, `dataset_name`, `query`, `per
 | `HELP_DEBT`           | HECS/HELP outstanding debt, indexation, compulsory + voluntary repayments annual | 2005-06 → 2024-25  | 8 measures × 20 years     |
 | `TAX_GAPS`            | ATO's tax gap estimates — how much tax is being missed each year by tax type | 2016-17 onward    | 5 measures × 4 tax types × ~7 years |
 | `RND_INCENTIVE`       | R&D Tax Incentive transparency — every entity's R&D claim (name, ABN, $)    | 2022-23            | ~13,000 entities          |
+| `ACNC_AIS_FINANCIALS` | Per-charity financials from the ACNC Annual Information Statement (revenue, expenses, staff) | 2023               | ~60,000 charities × 23 measures |
 
 Adding a new dataset is a single YAML drop into `src/ato_mcp/data/curated/` — see [CONTRIBUTING.md](CONTRIBUTING.md).
 

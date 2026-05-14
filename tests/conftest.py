@@ -95,3 +95,9 @@ def tax_gaps_xlsx() -> bytes:
 def rnd_incentive_xlsx() -> bytes:
     """ATO R&D Tax Incentive entity-level claims."""
     return (FIXTURE_DIR / "rnd_incentive.xlsx").read_bytes()
+
+
+@pytest.fixture
+def acnc_ais_csv() -> bytes:
+    """ACNC AIS — head-only sample (~38 large charities)."""
+    return (FIXTURE_DIR / "acnc_ais_head.csv").read_bytes()

@@ -1,0 +1,173 @@
+id: ACNC_AIS_FINANCIALS
+name: ACNC Annual Information Statement — Charity Financials (2023)
+description: |
+  ACNC Annual Information Statement (AIS) data — the per-charity financial
+  detail companion to `ACNC_REGISTER`. Where the register tells you who
+  the charity is and where they operate, the AIS tells you how big they
+  are: total revenue, expenses by type, staff counts, surplus/deficit.
+  ~60,000 charities × annual reporting period. The fastest answer to
+  "what's Vinnies' annual revenue?" or "which charity employs the most
+  staff?" or "how much did all NSW charities raise last year?".
+  Source: ACNC 2023 Annual Information Statement dataset on data.gov.au.
+period_coverage: 2023 (per-charity reporting periods vary)
+update_frequency: weekly
+source_url: https://data.gov.au/data/dataset/acnc-2023-annual-information-statement-ais-data
+download_url: https://data.gov.au/data/dataset/ff6905d6-9d5d-4ef1-8478-72b833864fb7/resource/2b0fb746-57c5-4523-bb4c-74b7b78279d9/download/datadotgov_ais23.csv
+format: csv
+header_row: 1
+layout: wide
+cache_kind: register
+search_keywords:
+  - charity financials
+  - charity revenue
+  - charity expenses
+  - acnc ais
+  - annual information statement
+  - charity employees
+  - charity volunteers
+  - charity surplus
+  - vinnies revenue
+  - red cross revenue
+  - charity benchmarking
+  - nonprofit financials
+discovery:
+  package_id: acnc-2023-annual-information-statement-ais-data
+  resource_name: 2023 AIS data (csv)
+columns:
+  abn:
+    source_column: "abn"
+    description: 11-digit ABN of the charity.
+    role: id
+    dtype: string
+  charity_name:
+    source_column: "charity name"
+    description: Legal name of the charity.
+    role: dimension
+    dtype: string
+  registration_status:
+    source_column: "registration status"
+    description: Active / cancelled / revoked.
+    role: dimension
+    dtype: string
+  charity_size:
+    source_column: "charity size"
+    description: ACNC size classification (Small / Medium / Large / Extra Large) by revenue.
+    role: dimension
+    dtype: string
+  basic_religious_charity:
+    source_column: "basic religious charity"
+    description: Whether the charity is registered as a Basic Religious Charity.
+    role: dimension
+    dtype: string
+  fin_report_from:
+    source_column: "fin report from"
+    description: Start of the financial reporting period.
+    role: dimension
+    dtype: string
+  fin_report_to:
+    source_column: "fin report to"
+    description: End of the financial reporting period.
+    role: dimension
+    dtype: string
+  staff_full_time:
+    source_column: "staff - full time"
+    description: Number of full-time staff.
+    unit: Persons
+    role: measure
+    dtype: int
+  staff_part_time:
+    source_column: "staff - part time"
+    description: Number of part-time staff.
+    unit: Persons
+    role: measure
+    dtype: int
+  staff_casual:
+    source_column: "staff - casual"
+    description: Number of casual staff.
+    unit: Persons
+    role: measure
+    dtype: int
+  staff_fte:
+    source_column: "total full time equivalent staff"
+    description: Total full-time equivalent staff (combines FT + PT + casual into FTE).
+    unit: Persons
+    role: measure
+    dtype: float
+  staff_volunteers:
+    source_column: "staff - volunteers"
+    description: Number of volunteers reported.
+    unit: Persons
+    role: measure
+    dtype: int
+  revenue_from_government:
+    source_column: "revenue from government"
+    description: Revenue from government grants and contracts.
+    unit: AUD
+    role: measure
+    dtype: float
+  donations_and_bequests:
+    source_column: "donations and bequests"
+    description: Income from donations and bequests.
+    unit: AUD
+    role: measure
+    dtype: float
+  revenue_from_goods_services:
+    source_column: "revenue from goods and services"
+    description: Revenue from sale of goods and services.
+    unit: AUD
+    role: measure
+    dtype: float
+  revenue_from_investments:
+    source_column: "revenue from investments"
+    description: Income from investments (interest, dividends, distributions).
+    unit: AUD
+    role: measure
+    dtype: float
+  total_revenue:
+    source_column: "total revenue"
+    description: Total revenue across all sources.
+    unit: AUD
+    role: measure
+    dtype: float
+  total_gross_income:
+    source_column: "total gross income"
+    description: Total gross income (revenue + other income).
+    unit: AUD
+    role: measure
+    dtype: float
+  employee_expenses:
+    source_column: "employee expenses"
+    description: Total employee-related expenses (salaries, super, etc.).
+    unit: AUD
+    role: measure
+    dtype: float
+  grants_made_au:
+    source_column: "grants and donations made for use in Australia"
+    description: Grants and donations the charity made for Australian use.
+    unit: AUD
+    role: measure
+    dtype: float
+  grants_made_overseas:
+    source_column: "grants and donations made for use outside Australia"
+    description: Grants and donations the charity made for overseas use.
+    unit: AUD
+    role: measure
+    dtype: float
+  total_expenses:
+    source_column: "total expenses"
+    description: Total expenses (all categories).
+    unit: AUD
+    role: measure
+    dtype: float
+  net_surplus_deficit:
+    source_column: "net surplus/deficit"
+    description: Bottom-line surplus (positive) or deficit (negative).
+    unit: AUD
+    role: measure
+    dtype: float
+dimension_values:
+  charity_size:
+    small: Small
+    medium: Medium
+    large: Large
+    extra_large: Extra Large
