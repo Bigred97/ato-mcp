@@ -150,3 +150,55 @@ def test_unknown_filter_value_suggests_close_match():
     msg = str(exc_info.value)
     assert "Did you mean 'nsw'" in msg
     assert "describe_dataset" in msg
+
+
+# ---- aus-identity cross-source normalisation on state filter ----
+
+
+def test_state_filter_accepts_full_state_name():
+    """`state='New South Wales'` resolves to canonical NSW."""
+    cd = curated.get("IND_POSTCODE_MEDIAN")
+    assert cd is not None
+    assert curated.translate_filter_value(cd, "state", "New South Wales") == "NSW"
+
+
+def test_state_filter_accepts_lowercase_full_name():
+    """`state='queensland'` (lowercase full name) resolves to QLD."""
+    cd = curated.get("IND_POSTCODE_MEDIAN")
+    assert cd is not None
+    assert curated.translate_filter_value(cd, "state", "queensland") == "QLD"
+
+
+def test_state_filter_accepts_iso_3166_form():
+    """`state='AU-VIC'` resolves to VIC."""
+    cd = curated.get("IND_POSTCODE_MEDIAN")
+    assert cd is not None
+    assert curated.translate_filter_value(cd, "state", "AU-VIC") == "VIC"
+
+
+def test_state_filter_accepts_common_alias():
+    """`state='Tassie'` resolves to TAS."""
+    cd = curated.get("IND_POSTCODE_MEDIAN")
+    assert cd is not None
+    assert curated.translate_filter_value(cd, "state", "Tassie") == "TAS"
+
+
+def test_state_filter_accepts_postcode_routing():
+    """`state='2000'` (Sydney CBD postcode) automatically routes to NSW."""
+    cd = curated.get("IND_POSTCODE_MEDIAN")
+    assert cd is not None
+    assert curated.translate_filter_value(cd, "state", "2000") == "NSW"
+
+
+def test_state_filter_postcode_in_act_routes_correctly():
+    """`state='2600'` (Parliament House) resolves to ACT, not NSW."""
+    cd = curated.get("IND_POSTCODE_MEDIAN")
+    assert cd is not None
+    assert curated.translate_filter_value(cd, "state", "2600") == "ACT"
+
+
+def test_acnc_register_state_accepts_full_name():
+    """ACNC_REGISTER has its own state dim — verify aus_identity works here too."""
+    cd = curated.get("ACNC_REGISTER")
+    assert cd is not None
+    assert curated.translate_filter_value(cd, "state", "Victoria") == "VIC"

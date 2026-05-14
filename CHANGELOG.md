@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-05-15
+
+### Added — aus-identity integration
+
+The cross-source compatibility moat for the AU public-data MCP stack. The
+`state` filter (on IND_POSTCODE, IND_POSTCODE_MEDIAN, ACNC_REGISTER, and
+every other state-aware dataset) now accepts ANY of:
+
+- Canonical short codes (`NSW`, `VIC`, `QLD`, `SA`, `WA`, `TAS`, `NT`, `ACT`)
+- Case-insensitive variants (`nsw`, `Nsw`)
+- Full names (`New South Wales`, `Queensland`, `Tasmania`)
+- ISO 3166-2 (`AU-NSW`, `AU-VIC`)
+- Common aliases (`Tassie`)
+- 4-digit postcodes (`2000` → NSW, `2600` → ACT, `3000` → VIC, `0800` → NT)
+
+Powered by [`aus-identity`](https://pypi.org/project/aus-identity/). An LLM
+agent that's already fetched a postcode from another sister MCP (asic-mcp,
+abs-mcp) can pass it straight to ato-mcp without manual conversion.
+
+- **`aus-identity>=0.1.0`** added as a new top-level dependency. Pure-Python,
+  no transitive deps.
+- **`curated.translate_filter_value`** now wraps state-shaped dims
+  (`state`, `region`, `state_territory`) with `aus_identity.normalize_state`
+  and `aus_identity.postcode_to_state` before falling through to the
+  existing alias / canonical lookup.
+- **7 new unit tests** in `tests/test_curated.py` covering full state name,
+  lowercase full name, ISO 3166-2 form, common alias, postcode routing,
+  ACT-postcode (ACT/NSW boundary), and a second dataset (ACNC_REGISTER).
+
+### Backward compatibility
+
+No breaking changes — every input that worked in 0.3.2 still works.
+
 ## [0.3.2] — 2026-05-15
 
 Error-message sweep — quality dimension #5 in CLAUDE.md. Rejection

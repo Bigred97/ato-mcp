@@ -21,6 +21,18 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
+from aus_identity import (
+    is_valid_postcode,
+    normalize_state,
+    postcode_to_state,
+)
+
+
+# Dim names whose values are state/region references. When `translate_filter_value`
+# encounters a value on one of these dims it tries `aus_identity` first so
+# "NSW", "nsw", "New South Wales", "AU-VIC", "Tassie", and 4-digit postcodes
+# all resolve to the curated alias (`nsw` / `NSW`).
+_STATE_LIKE_DIM_NAMES = frozenset({"state", "region", "state_territory"})
 
 Layout = Literal["wide", "transposed"]
 
@@ -216,6 +228,62 @@ def id_columns(cd: CuratedDataset) -> list[CuratedColumn]:
     return [c for c in cd.columns.values() if c.role == "id"]
 
 
+def _aus_identity_pass_through(dim_key: str, user_value: str) -> str:
+    """When a state-shaped dim has no curated enum, still normalise via
+    aus_identity so postcodes route to state codes and lowercase / full
+    names canonicalise. Returns the original value if it can't be
+    normalised (existing free-form behaviour preserved)."""
+    if dim_key not in _STATE_LIKE_DIM_NAMES:
+        return user_value
+    s = user_value.strip()
+    if s.isdigit() and is_valid_postcode(s):
+        try:
+            return postcode_to_state(s)
+        except ValueError:
+            return user_value
+    try:
+        return normalize_state(s)
+    except ValueError:
+        return user_value
+
+
+def _normalise_state_like(
+    dim_key: str, user_value: str, alias_to_canonical: dict[str, str]
+) -> str | None:
+    """Try `aus_identity` normalisation when the user value is state-shaped.
+
+    Returns the source-column value to use, or `None` to fall back to the
+    existing "Did you mean?" suggestion path.
+    """
+    if dim_key not in _STATE_LIKE_DIM_NAMES:
+        return None
+    s = user_value.strip()
+    if s.isdigit() and is_valid_postcode(s):
+        try:
+            code = postcode_to_state(s)
+        except ValueError:
+            return None
+    else:
+        try:
+            code = normalize_state(s)
+        except ValueError:
+            return None
+    # Resolve canonical state code back to the alias/value the YAML uses.
+    # Aliases are typically lowercase (`nsw`); canonical values uppercase
+    # (`NSW`). Try direct uppercase match first, then case-insensitive.
+    if code in alias_to_canonical:
+        return alias_to_canonical[code]
+    lower = code.lower()
+    if lower in alias_to_canonical:
+        return alias_to_canonical[lower]
+    # As a last resort, scan values (in case the source-column form
+    # differs from the canonical short code — e.g. "AU-NSW" or full name).
+    for v in alias_to_canonical.values():
+        if v.upper() == code:
+            return v
+    return None
+
+
 def translate_filter_value(
     cd: CuratedDataset, dim_key: str, user_value: str
 ) -> str:
@@ -225,15 +293,26 @@ def translate_filter_value(
     a plain-English alias (e.g. 'nsw') or the raw source value (e.g. 'NSW' or
     'New South Wales') — both resolve. If the dim is free-form (no enum), the
     raw value passes through.
+
+    State-shaped filters (`state`, `region`, `state_territory`) accept the
+    full canonical menu via `aus_identity`: short codes (`NSW`/`nsw`/`Nsw`),
+    full names (`New South Wales`), ISO 3166-2 (`AU-NSW`), aliases
+    (`Tassie`), and 4-digit postcodes (`2000` → NSW, `2600` → ACT).
     """
     dv = cd.dimension_values.get(dim_key)
     if dv is None or dv.values is None:
-        return user_value
+        # Free-form state-shaped dims (rare) still benefit from postcode
+        # routing: a user passing "2000" gets back "NSW" automatically.
+        return _aus_identity_pass_through(dim_key, user_value)
     if user_value in dv.values:
         return dv.values[user_value]
     # Maybe the user already passed the canonical value.
     if user_value in dv.values.values():
         return user_value
+    # Cross-source normalisation via aus_identity (state names, postcodes).
+    normalised = _normalise_state_like(dim_key, user_value, dv.values)
+    if normalised is not None:
+        return normalised
     valid = sorted(dv.values.keys())
     # Look in both aliases and canonical values for a close match.
     haystack = valid + sorted(set(dv.values.values()))

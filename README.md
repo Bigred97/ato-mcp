@@ -100,6 +100,13 @@ Adding a new dataset is a single YAML drop into `src/ato_mcp/data/curated/` — 
 
 ## Example queries (paste into Claude)
 
+> **Cross-source compatibility.** All location filters accept canonical
+> state codes (`"NSW"`), full names (`"New South Wales"`), case-insensitive
+> variants (`"nsw"`), ISO 3166-2 (`"AU-NSW"`), and 4-digit postcodes
+> (`"2000"` → NSW) on the `state` filter. Powered by
+> [`aus-identity`](https://pypi.org/project/aus-identity/) — the same input
+> shape works across abs-mcp, ato-mcp, apra-mcp, aihw-mcp, and asic-mcp.
+
 **Property-tech**: *"For postcodes 2000, 2008, 2026, and 2031 in NSW, give me the median taxable income across every available year so I can compare trajectories."*
 
 **Corporate tax**: *"Get the total income, taxable income, and tax payable for BHP IRON ORE (JIMBLEBAR) PTY LTD."*
