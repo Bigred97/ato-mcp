@@ -86,7 +86,19 @@ class DataResponse(BaseModel):
     source: str = "Australian Taxation Office"
     attribution: str = _ATO_ATTRIBUTION
     retrieved_at: datetime
-    ato_url: str
+    source_url: str = Field(
+        description=(
+            "Canonical click-through URL. Same value as ato_url; both populated "
+            "for backward compat."
+        )
+    )
+    ato_url: str = Field(
+        description=(
+            "Click-through URL for this dataset's source page. ato-mcp legacy "
+            "name — prefer source_url (canonical) for new code. Both fields are "
+            "populated identically."
+        )
+    )
     # Echoed in every response so testers can verify which wheel served the call;
     # uvx caches per-version and stale caches cause real "is this fixed?" confusion.
     server_version: str = Field(default_factory=lambda: _get_server_version())

@@ -278,3 +278,28 @@ def test_response_carries_metadata(corp_transparency_xlsx):
     assert resp.ato_url == cd.source_url
     assert resp.query == {"x": 1}
     assert resp.server_version
+
+
+def test_data_response_has_source_url_canonical_field(corp_transparency_xlsx):
+    """Wave-2 interop: both source_url and ato_url are populated and equal."""
+    cd = curated.get("CORP_TRANSPARENCY")
+    df = _parse(cd, corp_transparency_xlsx)
+    resp = shaping.build_response(
+        cd=cd, df=df, filters={}, measures="total_income",
+        start_period=None, end_period=None, fmt="records", user_query={},
+    )
+    assert resp.source_url is not None
+    assert resp.source_url == resp.ato_url
+    assert resp.source_url == cd.source_url
+
+
+def test_data_response_source_url_present_on_csv_format(corp_transparency_xlsx):
+    """source_url is populated regardless of output format."""
+    cd = curated.get("CORP_TRANSPARENCY")
+    df = _parse(cd, corp_transparency_xlsx)
+    resp = shaping.build_response(
+        cd=cd, df=df, filters={}, measures="total_income",
+        start_period=None, end_period=None, fmt="csv", user_query={},
+    )
+    assert resp.source_url == resp.ato_url
+    assert resp.source_url.startswith("https://")
