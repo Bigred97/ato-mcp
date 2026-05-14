@@ -93,6 +93,29 @@ class Cache:
             return None
         return row[0] if row else None
 
+    async def get_stale(self, key: str) -> tuple[bytes, float] | None:
+        """Return cached (payload, cached_at_epoch) regardless of TTL.
+
+        Used by the client as a fallback when data.gov.au is unavailable —
+        graceful degradation per CLAUDE.md quality dimension #4. The caller
+        computes "how stale" from the timestamp and surfaces it in
+        `DataResponse.stale_reason`.
+        """
+        await self._ensure_init()
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                async with conn.execute(
+                    "SELECT payload, cached_at FROM http_cache WHERE cache_key = ?",
+                    (key,),
+                ) as cur:
+                    row = await cur.fetchone()
+        except sqlite3.DatabaseError:
+            # Mirror .get(): mid-session corruption → drop, recreate, miss.
+            await self._reset_for_corruption()
+            await self._ensure_init()
+            return None
+        return (row[0], row[1]) if row else None
+
     async def set(self, key: str, value: bytes, kind: CacheKind) -> None:
         await self._ensure_init()
         try:

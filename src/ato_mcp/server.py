@@ -25,7 +25,7 @@ from fastmcp import FastMCP
 from pydantic import Field
 
 from . import catalog, curated
-from .client import ATOAPIError, ATOClient
+from .client import ATOAPIError, ATOClient, get_stale_signal, reset_stale_signal
 from .discovery import DiscoveryError, DiscoverySpec, resolve_latest_url
 from .models import ColumnDetail, DataResponse, DatasetDetail, DatasetSummary, Observation
 from .parsing import drop_blank_rows, read_csv, read_xlsx
@@ -393,6 +393,9 @@ async def _get_data_impl(
     fmt: Any,
     last_n: int | None = None,
 ) -> DataResponse:
+    # Reset the graceful-degradation flag at the start of each tool call so
+    # we only report staleness introduced by THIS call's fetches.
+    reset_stale_signal()
     norm_id = _normalize_dataset_id(dataset_id)
     cd = curated.get(norm_id)
     if cd is None:
@@ -434,7 +437,7 @@ async def _get_data_impl(
         user_query["end_period"] = end_v
 
     df = await _fetch_and_parse(cd, kind=cd.cache_kind)  # type: ignore[arg-type]
-    return build_response(
+    resp = build_response(
         cd=cd,
         df=df,
         filters=filters_d,
@@ -445,6 +448,13 @@ async def _get_data_impl(
         user_query=user_query,
         last_n=last_n,
     )
+    # If any fetch in the chain served a stale-cache fallback because
+    # data.gov.au was unreachable, propagate it to the response.
+    stale, reason = get_stale_signal()
+    if stale:
+        resp.stale = True
+        resp.stale_reason = reason
+    return resp
 
 
 @mcp.tool

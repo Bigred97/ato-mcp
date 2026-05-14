@@ -90,6 +90,16 @@ class DataResponse(BaseModel):
     # Echoed in every response so testers can verify which wheel served the call;
     # uvx caches per-version and stale caches cause real "is this fixed?" confusion.
     server_version: str = Field(default_factory=lambda: _get_server_version())
+    # Set when data.gov.au was unreachable and we served a cached payload past
+    # its normal TTL. Agents should surface `stale=True` to end users (e.g.
+    # "ATO returned 503; showing data from 12 minutes ago").
+    stale: bool = False
+    stale_reason: str | None = None
+    # Set when a tool truncated a large response to a limit (register-style
+    # datasets). Original row count goes here so agents can detect + surface
+    # the cap. Always None for the time-series-shaped ATO data today; included
+    # for uniformity with the sister-MCP envelope.
+    truncated_at: int | None = None
 
 
 def _get_server_version() -> str:

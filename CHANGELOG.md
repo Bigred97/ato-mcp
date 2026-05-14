@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-05-15
+
+Graceful degradation — quality dimension #4 in CLAUDE.md. Pattern ported
+from abs-mcp 0.2.13.
+
+When data.gov.au is unreachable (5xx, timeout, DNS failure, connection
+refused), the client now falls back to the most-recent cached payload
+regardless of TTL and surfaces the staleness in the response. Agents
+see `DataResponse.stale=True` with a `stale_reason` like *"ATO API
+returned 503 for <url>; serving cached payload from ~17 minute(s) ago"*
+and can continue reasoning, rather than the tool raising and breaking
+the chat.
+
+Genuine no-cache-to-fall-back-to case still raises `ATOAPIError` — only
+degrade gracefully when there's something to degrade to. CKAN catalog
+lookups (`kind="catalog"`) deliberately bypass the fallback: a stale
+package listing could resolve to the wrong year's resource URL and
+silently mask an ATO rename. Discovery already falls back to the YAML's
+hard-coded `download_url` on `DiscoveryError`, so a clean error here is
+the right signal.
+
+- **New: `Cache.get_stale(key) -> (payload, cached_at)`** — TTL-bypassing
+  read, the building block for the fallback path. Mirrors `.get()`'s
+  mid-session corruption handling.
+- **New: `_stale_signal` ContextVar in `client.py`** — `reset_stale_signal()`
+  + `get_stale_signal()` are the public API. The server resets at the
+  start of each `_get_data_impl` call and reads after `build_response`
+  to propagate `stale=True` into the response.
+- **New: `DataResponse.stale: bool` and `DataResponse.stale_reason: str | None`** —
+  echoed in every response when serving a stale cache.
+- **New: `DataResponse.truncated_at: int | None`** — placeholder field
+  matching the sister-MCP envelope; remains `None` for time-series-shaped
+  ATO data today.
+- **+4 regression tests** in `test_resilience.py`:
+  1. 503 + stale cache → fallback + stale flag set, wording check
+  2. ConnectError + stale cache → same, `unreachable` wording
+  3. 503 + empty cache → raises `ATOAPIError` (unchanged behaviour)
+  4. `Cache.get_stale()` round-trip + TTL bypass verification
+- 298 unit tests now (was 294 in 0.3.0).
+
 ## [0.3.0] — 2026-05-13
 
 Minor release. Two new sellable datasets pushing the catalog to **14 curated datasets**.

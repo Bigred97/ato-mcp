@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
+from contextvars import ContextVar
 from typing import Any
 
 import httpx
@@ -21,6 +23,38 @@ from .cache import TTL, Cache, CacheKind
 
 DEFAULT_BASE_URL = "https://data.gov.au"
 DEFAULT_TIMEOUT = httpx.Timeout(120.0, connect=15.0)  # ACNC CSV is 14MB; allow time
+
+
+# ─── stale signal (graceful-degradation reporting per CLAUDE.md dim #4) ─
+# When data.gov.au is unreachable, _fetch_cached falls back to the cached
+# payload regardless of TTL and records the staleness in this ContextVar.
+# Server-side tool wrappers read it after the request chain and set
+# DataResponse.stale / .stale_reason. ContextVar (not instance attr) so
+# concurrent MCP tool calls each see their own state.
+_stale_signal: ContextVar[tuple[bool, str | None]] = ContextVar(
+    "ato_mcp_stale_signal", default=(False, None)
+)
+
+
+def reset_stale_signal() -> None:
+    """Clear the stale state. Call once at the start of each tool call."""
+    _stale_signal.set((False, None))
+
+
+def get_stale_signal() -> tuple[bool, str | None]:
+    """Return (stale, reason) for the most recent fetch chain in this context."""
+    return _stale_signal.get()
+
+
+def _mark_stale(reason: str) -> None:
+    """Record that a stale-cache fallback was served this context.
+
+    If multiple fetches in one chain are stale, we keep the FIRST reason
+    (it's usually the most informative — the originating upstream failure).
+    """
+    cur_stale, _ = _stale_signal.get()
+    if not cur_stale:
+        _stale_signal.set((True, reason))
 
 
 class ATOAPIError(Exception):
@@ -106,11 +140,45 @@ class ATOClient:
             try:
                 resp = await self._http.get(url)
                 resp.raise_for_status()
-            except httpx.HTTPStatusError as e:
-                raise ATOAPIError(
-                    f"data.gov.au returned {e.response.status_code} for {url}"
-                ) from e
-            except httpx.RequestError as e:
+            except (httpx.HTTPStatusError, httpx.RequestError) as e:
+                # Graceful degradation: when data.gov.au is unreachable,
+                # fall back to the most-recent cached payload (regardless of
+                # TTL) rather than raising and breaking the agent's chain
+                # of reasoning. The staleness is surfaced via the
+                # _stale_signal ContextVar and ends up in DataResponse.stale.
+                #
+                # Only the data-fetch kinds degrade gracefully. CKAN catalog
+                # lookups ("I don't know the URL") fail differently to data
+                # fetches ("the data is down") — serving stale CKAN metadata
+                # could resolve to a stale resource URL and silently mask
+                # ATO renames. Discovery already falls back to the YAML's
+                # hard-coded download_url on DiscoveryError, so a clean
+                # ATOAPIError here is the right signal.
+                if kind != "catalog":
+                    fallback = await self.cache.get_stale(url)
+                    if fallback is not None:
+                        payload, cached_at = fallback
+                        age_min = max(0, int((time.time() - cached_at) / 60))
+                        if isinstance(e, httpx.HTTPStatusError):
+                            upstream = (
+                                f"ATO API returned {e.response.status_code}"
+                            )
+                        else:
+                            upstream = (
+                                f"ATO API unreachable ({type(e).__name__})"
+                            )
+                        _mark_stale(
+                            f"{upstream} for {url}; serving cached payload "
+                            f"from ~{age_min} minute(s) ago"
+                        )
+                        future.set_result(payload)
+                        return payload
+                # Genuinely no cache to fall back to (or CKAN failure) —
+                # preserve original behaviour.
+                if isinstance(e, httpx.HTTPStatusError):
+                    raise ATOAPIError(
+                        f"data.gov.au returned {e.response.status_code} for {url}"
+                    ) from e
                 raise ATOAPIError(f"data.gov.au request failed: {e}") from e
             await self.cache.set(url, resp.content, kind=kind)
             future.set_result(resp.content)
