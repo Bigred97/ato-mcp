@@ -14,6 +14,7 @@ to the parsed DataFrame.
 """
 from __future__ import annotations
 
+import difflib
 from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
@@ -234,10 +235,16 @@ def translate_filter_value(
     if user_value in dv.values.values():
         return user_value
     valid = sorted(dv.values.keys())
+    # Look in both aliases and canonical values for a close match.
+    haystack = valid + sorted(set(dv.values.values()))
+    suggestion = difflib.get_close_matches(user_value, haystack, n=1, cutoff=0.6)
+    hint = f"Did you mean {suggestion[0]!r}? " if suggestion else ""
+    more = "..." if len(valid) > 10 else ""
     raise ValueError(
         f"Unknown value {user_value!r} for filter {dim_key!r} on dataset {cd.id!r}. "
-        f"Try one of: {', '.join(valid[:15])}"
-        + ("..." if len(valid) > 15 else "")
+        f"{hint}"
+        f"Valid options: {', '.join(valid[:10])}{more}. "
+        f"Try describe_dataset({cd.id!r}) to see all allowed values."
     )
 
 
@@ -285,33 +292,53 @@ def resolve_measure_keys(
         if not requested:
             raise ValueError(
                 "measures filter is an empty list. "
-                "Pass at least one measure, or omit `measures` to return all."
+                "Pass at least one measure, or omit `measures` to return all. "
+                f"Try describe_dataset({cd.id!r}) to see available measures."
             )
         items = [str(x) for x in requested]
     else:
+        sample_keys = sorted(measure_keys)[:3]
+        example = (
+            f"measures={sample_keys[0]!r}" if sample_keys else "measures='total_income'"
+        )
         raise ValueError(
-            f"measures must be a string or list of strings, got {type(requested).__name__}."
+            f"measures must be a string or list of strings, got {type(requested).__name__}. "
+            f"Try describe_dataset({cd.id!r}) to discover valid measure keys. "
+            f"Example: {example}."
         )
 
     source_to_key = {c.source_column: c.key for c in cd.columns.values() if c.role == "measure"}
     valid_keys = set(measure_keys)
+    valid_sorted = sorted(valid_keys)
     out: list[str] = []
     for v in items:
         v_str = v.strip()
         if not v_str:
+            more = "..." if len(valid_sorted) > 10 else ""
             raise ValueError(
-                f"Empty measure key. Try one of: {', '.join(sorted(valid_keys)[:15])}"
+                f"Empty measure key. "
+                f"Valid options: {', '.join(valid_sorted[:10])}{more}. "
+                f"Try describe_dataset({cd.id!r}) for full measure details."
             )
         if v_str in valid_keys:
             out.append(v_str)
         elif v_str in source_to_key:
             out.append(source_to_key[v_str])
         else:
-            valid_hint = ", ".join(sorted(valid_keys)[:15]) if valid_keys else "(none — dataset has no curated measures)"
+            # Look across both alias keys and raw source columns for a close match.
+            haystack = valid_sorted + sorted(source_to_key.keys())
+            suggestion = difflib.get_close_matches(v_str, haystack, n=1, cutoff=0.6)
+            hint = f"Did you mean {suggestion[0]!r}? " if suggestion else ""
+            valid_hint = (
+                ", ".join(valid_sorted[:10])
+                if valid_keys else "(none — dataset has no curated measures)"
+            )
+            more = "..." if len(valid_keys) > 10 else ""
             raise ValueError(
                 f"Unknown measure {v!r} for dataset {cd.id!r}. "
-                f"Try one of: {valid_hint}"
-                + ("..." if len(valid_keys) > 15 else "")
+                f"{hint}"
+                f"Valid options: {valid_hint}{more}. "
+                f"Try describe_dataset({cd.id!r}) for full measure details."
             )
     # Dedupe while preserving order.
     seen: set[str] = set()

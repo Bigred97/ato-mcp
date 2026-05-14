@@ -100,6 +100,35 @@ async def test_get_data_bad_format():
 
 
 @pytest.mark.asyncio
+async def test_unknown_dataset_id_suggests_close_match():
+    """Quality dim #5: unknown dataset IDs should hint at the closest curated ID
+    via difflib's get_close_matches. A typo of CORP_TRANSPARENCY should surface
+    that name back to the agent so it can self-correct without a separate
+    list_curated() round-trip."""
+    with pytest.raises(ValueError) as exc_info:
+        await server.describe_dataset("CORP_TRANSPRENCY")  # missing the 'A'
+    msg = str(exc_info.value)
+    assert "Did you mean" in msg
+    assert "CORP_TRANSPARENCY" in msg
+    # Same shape on get_data
+    with pytest.raises(ValueError) as exc_info2:
+        await server.get_data("CORP_TRANSPRENCY")
+    assert "Did you mean 'CORP_TRANSPARENCY'" in str(exc_info2.value)
+
+
+@pytest.mark.asyncio
+async def test_unknown_format_suggests_close_match():
+    """Quality dim #5: an unknown format like 'recrods' (typo of 'records')
+    should suggest the closest valid format and also list all options."""
+    with pytest.raises(ValueError) as exc_info:
+        await server.get_data("CORP_TRANSPARENCY", format="recrods")  # type: ignore[arg-type]
+    msg = str(exc_info.value)
+    assert "Did you mean 'records'" in msg
+    # And still lists valid options
+    assert "records" in msg and "series" in msg and "csv" in msg
+
+
+@pytest.mark.asyncio
 async def test_list_curated_returns_sorted_ids():
     ids = server.list_curated()
     assert ids == sorted(ids)

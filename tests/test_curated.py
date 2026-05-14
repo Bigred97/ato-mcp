@@ -124,3 +124,29 @@ def test_resolve_measure_keys_unknown_raises():
     assert cd is not None
     with pytest.raises(ValueError, match="Unknown measure"):
         curated.resolve_measure_keys(cd, "alien_metric")
+
+
+def test_unknown_measure_suggests_close_match():
+    """Quality dim #5: a typo'd measure key (e.g. 'tax_payible' for 'tax_payable')
+    should surface the corrected suggestion via difflib so the agent can self-correct."""
+    cd = curated.get("CORP_TRANSPARENCY")
+    assert cd is not None
+    with pytest.raises(ValueError) as exc_info:
+        curated.resolve_measure_keys(cd, "tax_payible")  # typo: payible -> payable
+    msg = str(exc_info.value)
+    assert "Did you mean 'tax_payable'" in msg
+    # And points back to describe_dataset for full details
+    assert "describe_dataset" in msg
+
+
+def test_unknown_filter_value_suggests_close_match():
+    """Quality dim #5: an unknown filter value (e.g. 'nws' for 'nsw') should
+    point to the closest valid alias and reference describe_dataset() for the
+    full list, not just describe the rejection."""
+    cd = curated.get("IND_POSTCODE_MEDIAN")
+    assert cd is not None
+    with pytest.raises(ValueError) as exc_info:
+        curated.translate_filter_value(cd, "state", "nws")  # typo: nws -> nsw
+    msg = str(exc_info.value)
+    assert "Did you mean 'nsw'" in msg
+    assert "describe_dataset" in msg

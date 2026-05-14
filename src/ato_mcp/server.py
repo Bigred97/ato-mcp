@@ -15,6 +15,7 @@ ATO's verbose source column header. Curated YAMLs do the translation.
 from __future__ import annotations
 
 import asyncio
+import difflib
 import hashlib
 import re
 from collections import OrderedDict
@@ -55,6 +56,23 @@ _df_cache_lock = asyncio.Lock()
 def reset_df_cache_for_tests() -> None:
     """Drop the parsed-DataFrame cache. Tests use this to start from clean."""
     _df_cache.clear()
+
+
+def _suggest_dataset_id(bad: str) -> str:
+    """Return a 'Did you mean X?' fragment for an unknown dataset ID.
+
+    Uses difflib to find the closest curated ID (case-insensitive). Returns
+    an empty string when no close match exists so the caller can append it
+    unconditionally.
+    """
+    if not isinstance(bad, str) or not bad.strip():
+        return ""
+    candidates = curated.list_ids()
+    norm = bad.strip().upper()
+    matches = difflib.get_close_matches(norm, candidates, n=1, cutoff=0.6)
+    if not matches:
+        return ""
+    return f"Did you mean {matches[0]!r}? "
 
 
 async def _get_client() -> ATOClient:
@@ -112,8 +130,10 @@ def _validate_period(value: Any, field_name: str) -> str | None:
         return None
     if not isinstance(value, str):
         raise ValueError(
-            f"{field_name} must be a string like '2024' or '2024-06', "
-            f"got {type(value).__name__}."
+            f"{field_name} must be a string, got {type(value).__name__}. "
+            "Try a year ('2024'), a month ('2024-06'), or an ATO financial "
+            "year ('2022-23'). Example: "
+            "get_data('GST_MONTHLY', start_period='2024', end_period='2024-06')."
         )
     s = value.strip()
     if not s:
@@ -122,7 +142,9 @@ def _validate_period(value: Any, field_name: str) -> str | None:
         raise ValueError(
             f"{field_name} {value!r} has invalid format. "
             "Use 'YYYY' (e.g. '2024'), 'YYYY-MM' (e.g. '2024-06'), or "
-            "an ATO financial year like '2022-23'."
+            "an ATO financial year like '2022-23'. Did you mean "
+            f"{s[:4] if s[:4].isdigit() else '2024'!r}? "
+            "Example: get_data('GST_MONTHLY', start_period='2024-01', end_period='2024-06')."
         )
     return s
 
@@ -148,15 +170,24 @@ def _validate_measures(measures: Any) -> str | list[str] | None:
         for m in measures:
             if not isinstance(m, str):
                 raise ValueError(
-                    f"measures list entries must be strings, got {type(m).__name__}."
+                    f"measures list entries must be strings, got {type(m).__name__}. "
+                    "Try a measure key from describe_dataset(). "
+                    "Example: measures=['total_income', 'tax_payable']."
                 )
             s = m.strip()
             if not s:
-                raise ValueError("measures list contains an empty string.")
+                raise ValueError(
+                    "measures list contains an empty string. "
+                    "Try a measure key from describe_dataset() — "
+                    "e.g. measures=['total_income', 'tax_payable'] — "
+                    "or omit `measures` to return all."
+                )
             out.append(s)
         return out
     raise ValueError(
-        f"measures must be a string or list of strings, got {type(measures).__name__}."
+        f"measures must be a string or list of strings, got {type(measures).__name__}. "
+        "Try describe_dataset(dataset_id) to discover valid measure keys. "
+        "Example: measures='total_income' or measures=['total_income', 'tax_payable']."
     )
 
 
@@ -303,10 +334,16 @@ async def search_datasets(
         )
     if isinstance(limit, bool) or not isinstance(limit, int):
         raise ValueError(
-            f"limit must be a positive integer, got {limit!r} ({type(limit).__name__})."
+            f"limit must be a positive integer, got {limit!r} ({type(limit).__name__}). "
+            "Try limit=10 (default) or any int between 1 and 50. "
+            "Example: search_datasets('postcode', limit=5)."
         )
     if limit < 1:
-        raise ValueError(f"limit must be >= 1, got {limit}.")
+        raise ValueError(
+            f"limit must be >= 1, got {limit}. "
+            "Try limit=10 (default) or any int between 1 and 50. "
+            "Example: search_datasets('postcode', limit=5)."
+        )
     return catalog.search(query, limit=limit)
 
 
@@ -344,9 +381,12 @@ async def describe_dataset(
     norm_id = _normalize_dataset_id(dataset_id)
     cd = curated.get(norm_id)
     if cd is None:
+        suggestion = _suggest_dataset_id(dataset_id)
         raise ValueError(
             f"Dataset {dataset_id!r} is not a curated ato-mcp dataset. "
-            "Try list_curated() to see available IDs."
+            f"{suggestion}"
+            "Try list_curated() to see all available IDs, or "
+            "search_datasets('keyword') to fuzzy-find by topic."
         )
     dims_out = [
         ColumnDetail(
@@ -399,9 +439,12 @@ async def _get_data_impl(
     norm_id = _normalize_dataset_id(dataset_id)
     cd = curated.get(norm_id)
     if cd is None:
+        suggestion = _suggest_dataset_id(dataset_id)
         raise ValueError(
             f"Dataset {dataset_id!r} is not a curated ato-mcp dataset. "
-            "Try list_curated() to see available IDs."
+            f"{suggestion}"
+            "Try list_curated() to see all available IDs, or "
+            "search_datasets('keyword') to fuzzy-find by topic."
         )
     filters_d = _validate_filters(filters)
     measures_v = _validate_measures(measures)
@@ -414,11 +457,16 @@ async def _get_data_impl(
     else:
         raise ValueError(
             f"format must be a string, got {type(fmt).__name__}. "
-            f"Valid options: {sorted(_VALID_FORMATS)}"
+            f"Valid options: {sorted(_VALID_FORMATS)}. "
+            "Try format='records' (default), format='series', or format='csv'."
         )
     if fmt_norm not in _VALID_FORMATS:
+        suggestion = difflib.get_close_matches(fmt_norm, sorted(_VALID_FORMATS), n=1, cutoff=0.5)
+        hint = f"Did you mean {suggestion[0]!r}? " if suggestion else ""
         raise ValueError(
-            f"Unknown format {fmt!r}. Valid options: {sorted(_VALID_FORMATS)}"
+            f"Unknown format {fmt!r}. Valid options: {sorted(_VALID_FORMATS)}. "
+            f"{hint}"
+            "Try format='records' (default), format='series', or format='csv'."
         )
     if start_v and end_v and start_v > end_v:
         raise ValueError(
@@ -683,13 +731,26 @@ async def top_n(
         )
     if isinstance(n, bool) or not isinstance(n, int):
         raise ValueError(
-            f"n must be a positive integer, got {n!r} ({type(n).__name__})."
+            f"n must be a positive integer, got {n!r} ({type(n).__name__}). "
+            "Try n=10 (default) or any int between 1 and 500. "
+            "Example: top_n('CORP_TRANSPARENCY', 'tax_payable', n=20)."
         )
     if n < 1:
-        raise ValueError(f"n must be >= 1, got {n}.")
-    if direction not in ("top", "bottom"):
         raise ValueError(
-            f"direction must be 'top' or 'bottom', got {direction!r}."
+            f"n must be >= 1, got {n}. "
+            "Try n=10 (default) or any int between 1 and 500. "
+            "Example: top_n('CORP_TRANSPARENCY', 'tax_payable', n=20)."
+        )
+    if direction not in ("top", "bottom"):
+        suggestion = difflib.get_close_matches(
+            str(direction).lower() if isinstance(direction, str) else "",
+            ["top", "bottom"], n=1, cutoff=0.4,
+        )
+        hint = f"Did you mean {suggestion[0]!r}? " if suggestion else ""
+        raise ValueError(
+            f"direction must be 'top' or 'bottom', got {direction!r}. "
+            f"{hint}"
+            "Try direction='top' for largest values, direction='bottom' for smallest."
         )
 
     # Run a full get_data first, then rank + slice. The parsed-DataFrame cache
@@ -843,12 +904,24 @@ async def stats(
     cd = curated.get(_normalize_dataset_id(dataset_id))
     if cd is None:
         # _get_data_impl above would have raised already, but defend anyway
-        raise ValueError(f"Dataset {dataset_id!r} is not a curated ato-mcp dataset.")
+        suggestion = _suggest_dataset_id(dataset_id)
+        raise ValueError(
+            f"Dataset {dataset_id!r} is not a curated ato-mcp dataset. "
+            f"{suggestion}"
+            "Try list_curated() to see all available IDs, or "
+            "search_datasets('keyword') to fuzzy-find by topic."
+        )
     valid_dim_keys = {c.key for c in cd.columns.values() if c.role in ("dimension", "id")}
     if group_by not in valid_dim_keys:
+        valid_sorted = sorted(valid_dim_keys)
+        suggestion = difflib.get_close_matches(group_by, valid_sorted, n=1, cutoff=0.6)
+        hint = f"Did you mean {suggestion[0]!r}? " if suggestion else ""
+        more = "..." if len(valid_sorted) > 10 else ""
         raise ValueError(
             f"Unknown group_by {group_by!r} for dataset {cd.id!r}. "
-            f"Try one of: {', '.join(sorted(valid_dim_keys)[:15])}"
+            f"{hint}"
+            f"Valid options: {', '.join(valid_sorted[:10])}{more}. "
+            f"Try describe_dataset({cd.id!r}) for full dimension details."
         )
 
     buckets: dict[str, list[float]] = {}

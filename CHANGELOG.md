@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] — 2026-05-15
+
+Error-message sweep — quality dimension #5 in CLAUDE.md. Rejection
+messages now suggest the correction instead of just describing what's
+wrong.
+
+`ValueError` raises across `server.py`, `shaping.py`, and `curated.py`
+were audited against the "Try X / Did you mean X? / Valid options:" bar.
+The ~12 weak sites identified by the prior audit were rewritten to:
+
+- Surface a `Did you mean X?` hint via `difflib.get_close_matches` when
+  the input is a likely typo (unknown dataset ID, unknown measure key,
+  unknown filter name, unknown filter value, unknown format, unknown
+  group_by, unknown direction).
+- List up to 10 valid alternatives inline, with `...` truncation marker
+  when more exist, and a pointer to the discovery tool that gives the
+  full picture (`describe_dataset(...)`, `list_curated()`,
+  `search_datasets(...)`).
+- Include a worked example for format and period validation failures
+  (e.g. `Example: get_data('GST_MONTHLY', start_period='2024-01',
+  end_period='2024-06')`).
+- Tighten type-coercion messages (limit, n, measures-list entries) to
+  pair the rejected value with a usable substitute.
+
+Concrete before/after:
+
+```
+# Before (0.3.1)
+"Dataset 'CORP_TRANSPRENCY' is not a curated ato-mcp dataset.
+ Try list_curated() to see available IDs."
+
+# After (0.3.2)
+"Dataset 'CORP_TRANSPRENCY' is not a curated ato-mcp dataset.
+ Did you mean 'CORP_TRANSPARENCY'?
+ Try list_curated() to see all available IDs, or
+ search_datasets('keyword') to fuzzy-find by topic."
+```
+
+No public-API behaviour change — the exception type is still
+`ValueError`, all existing test message-match assertions still trigger
+on the same key phrases.
+
+- **+4 regression tests** (`test_server_validation.py` x2 +
+  `test_curated.py` x2) — unknown dataset ID, unknown format, unknown
+  measure key, unknown filter value all assert the new `Did you mean`
+  + valid-options hint shape.
+- 302 unit tests now (was 298 in 0.3.1).
+- No new dependencies; `difflib` is a stdlib module.
+
 ## [0.3.1] — 2026-05-15
 
 Graceful degradation — quality dimension #4 in CLAUDE.md. Pattern ported
