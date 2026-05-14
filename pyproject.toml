@@ -10,7 +10,12 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Harry Vass" }]
-keywords = ["mcp", "ato", "australia", "taxation", "tax-statistics", "acnc", "claude", "fastmcp", "property-tech", "fintech"]
+keywords = [
+    "mcp", "model-context-protocol", "claude", "fastmcp",
+    "ato", "taxation", "tax-statistics", "acnc", "charity-register",
+    "australia", "australian", "public-data", "government-data", "data-gov-au",
+    "property-tech", "fintech",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -46,7 +51,11 @@ ato-mcp = "ato_mcp.server:main"
 
 [project.urls]
 Homepage = "https://github.com/Bigred97/ato-mcp"
+Documentation = "https://github.com/Bigred97/ato-mcp#readme"
+Repository = "https://github.com/Bigred97/ato-mcp"
 Issues = "https://github.com/Bigred97/ato-mcp/issues"
+Changelog = "https://github.com/Bigred97/ato-mcp/blob/main/CHANGELOG.md"
+PyPI = "https://pypi.org/project/ato-mcp/"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ato_mcp"]

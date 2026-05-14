@@ -1,9 +1,10 @@
 # ato-mcp
 
-[![tests](https://github.com/Bigred97/ato-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/Bigred97/ato-mcp/actions/workflows/test.yml)
 [![PyPI](https://img.shields.io/pypi/v/ato-mcp.svg)](https://pypi.org/project/ato-mcp/)
 [![Python](https://img.shields.io/pypi/pyversions/ato-mcp.svg)](https://pypi.org/project/ato-mcp/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License](https://img.shields.io/pypi/l/ato-mcp.svg)](https://github.com/Bigred97/ato-mcp/blob/main/LICENSE)
+[![Tests](https://github.com/Bigred97/ato-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/Bigred97/ato-mcp/actions/workflows/test.yml)
+[![CodeQL](https://github.com/Bigred97/ato-mcp/actions/workflows/codeql.yml/badge.svg)](https://github.com/Bigred97/ato-mcp/actions/workflows/codeql.yml)
 [![Glama MCP server quality](https://glama.ai/mcp/servers/Bigred97/ato-mcp/badges/score.svg)](https://glama.ai/mcp/servers/Bigred97/ato-mcp)
 
 **MCP server for Australian Taxation Office statistics.** Plain-English access to personal tax by postcode, company tax by industry, corporate tax transparency for every $100M+ entity, super contributions by age, salary by occupation, monthly GST collections, and the live ACNC charity register — all from a single `uvx` command.
@@ -133,14 +134,20 @@ Data sourced from the Australian Taxation Office and the Australian Charities an
 
 ---
 
-## Sister packages
+## Sister MCPs (Australian Public Data portfolio)
 
-- [abs-mcp](https://github.com/Bigred97/abs-mcp) — ABS census and economic statistics (unemployment, CPI, GDP, population, building approvals)
-- [rba-mcp](https://github.com/Bigred97/rba-mcp) — RBA statistical tables (cash rate, FX rates, mortgage rates, money market)
+- [abs-mcp](https://pypi.org/project/abs-mcp/) — Australian Bureau of Statistics (CPI, unemployment, ERP, building approvals)
+- [rba-mcp](https://pypi.org/project/rba-mcp/) — Reserve Bank of Australia (cash rate, lending stats, exchange rates)
 - **ato-mcp** — this one. Tax, super, and charity registers.
-- [au-weather-mcp](https://github.com/Bigred97/au-weather-mcp) — Australian weather via Open-Meteo + BOM. 21 curated locations + postcode/place-name lookup, current observations, 16-day forecasts, 80yr historical archive.
+- [apra-mcp](https://pypi.org/project/apra-mcp/) — Australian Prudential Regulation Authority (banking, insurance, super)
+- [aihw-mcp](https://pypi.org/project/aihw-mcp/) — Australian Institute of Health and Welfare
+- [asic-mcp](https://pypi.org/project/asic-mcp/) — Australian Securities and Investments Commission (company registers)
+- [aemo-mcp](https://pypi.org/project/aemo-mcp/) — Australian Energy Market Operator (NEM dispatch, spot prices, generation)
+- [au-weather-mcp](https://pypi.org/project/au-weather-mcp/) — Open-Meteo (Bureau of Meteorology aggregator)
+- [wgea-mcp](https://pypi.org/project/wgea-mcp/) — Workplace Gender Equality Agency
+- [aus-identity](https://pypi.org/project/aus-identity/) — Postcode / state / ABN normalisation helper used by all sisters
 
-All four are designed to compose: an agent can ask for "unemployment + cash rate + median income + climate" in postcode 2000 and one shot fans out across four MCPs.
+The portfolio is designed to compose: an agent can ask for "unemployment + cash rate + median income + climate" in postcode 2000 and one shot fans out across multiple MCPs.
 
 ---
 
