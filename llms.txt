@@ -1,91 +1,39 @@
-# ato-mcp — MCP server for Australian Taxation Office statistics
+# ato-mcp
 
-MCP (Model Context Protocol) server giving Claude and other LLM agents plain-English access to Australian Taxation Office and ACNC datasets via data.gov.au. Sister package to abs-mcp and rba-mcp.
+> MCP server exposing Australian Taxation Office and ACNC statistics through 7 plain-English tools — per-postcode personal tax, company tax by industry, corporate tax transparency, GST collections, super contributions, charity register, HELP debt, occupation salaries.
 
-## What's exposed
+ato-mcp is the Australian Taxation Office (ATO) member of the Australian Public Data MCP portfolio. It fetches ATO Taxation Statistics XLSX and the live ACNC charity register from data.gov.au via CKAN — when ATO publishes next year's Taxation Statistics the server resolves the new resource URL at fetch time, no wheel update required.
 
-Six MCP tools — superset of the sister packages (top_n is ato-mcp specific):
+14 curated datasets cover the high-value publications: postcode-level income, company tax, $100M+ corporate tax disclosures, super contributions by age, GST monthly collections, ACNC charity register with financial detail, HECS/HELP debt, ATO tax-gap estimates, R&D Tax Incentive claims, occupation salaries, SMSF sector, Small Business Benchmarks. ato-mcp has 7 tools instead of the standard 5 — adds `top_n` for ranked queries and `stats` for grouped aggregates (count/sum/mean/median/min/max/stddev with optional `group_by`).
 
-- search_datasets(query, limit=10) -> list[DatasetSummary]
-- describe_dataset(dataset_id) -> DatasetDetail
-- get_data(dataset_id, filters?, measures?, start_period?, end_period?, format?) -> DataResponse
-- latest(dataset_id, filters?, measures?) -> DataResponse
-- top_n(dataset_id, measure, n=10, filters?, direction="top"|"bottom") -> DataResponse
-- stats(dataset_id, measure, filters?, group_by?) -> dict (count/sum/mean/median/min/max/stddev). When group_by is set, returns per-group stats — e.g. group_by="state" partitions postcode incomes by state in one call.
-- list_curated() -> list[str]
+## Documentation
 
-## Curated datasets (v0.1)
+- [README](https://github.com/Bigred97/ato-mcp/blob/main/README.md): Full setup + tool usage + worked example queries
+- [CHANGELOG](https://github.com/Bigred97/ato-mcp/blob/main/CHANGELOG.md): Release history
+- [PyPI](https://pypi.org/project/ato-mcp/): `uvx --upgrade ato-mcp`
 
-- IND_POSTCODE: Individuals tax stats by taxable status × state × SA4 × postcode (Taxation Statistics 2022-23, Table 6A). ~5,200 rows.
-- IND_POSTCODE_MEDIAN: Median and average taxable income by postcode, 2003-04 to 2022-23. ~2,300 postcodes × 21 yearly measures.
-- COMPANY_INDUSTRY: Company tax by ANZSIC broad + fine industry (Table 4A). 216 industry cells.
-- CORP_TRANSPARENCY: Entity-level tax disclosures for $100M+ corporations, 2023-24. ~4,200 entities. Fields: legal name, ABN, total income, taxable income, tax payable.
-- SUPER_CONTRIB_AGE: Super contributions by age × sex × taxable income bracket (Table 23A). 2022-23.
-- ACNC_REGISTER: Live ACNC charity register. ~60,000 entities × 69 fields. Updated weekly.
-- GST_MONTHLY: Monthly GST / WET / LCT collections (Table 1B). 10 metrics × 48 months from 2020-07 to 2024-06. Transposed time-series layout.
-- ATO_OCCUPATION: Individuals income (median / average; taxable / salary-wage / total) by ANZSCO 6-digit occupation × sex (Table 15A). ~1,200 jobs × 3 sex categories. 2022-23.
-- SMSF_FUNDS: Self-managed super fund sector size — total funds, total members, total gross assets (millions AUD) by financial year. 2019-20 to 2024-25 (6 years × 3 metrics). Transposed-layout.
-- SBB_BENCHMARKS: ATO Small Business Benchmarks 2023-24 — industry-specific total-expenses-to-income and cost-of-sales-to-income ratio bands (low/medium/high turnover) for ~100 small-business categories. Tax-advisor / accounting use case.
-- HELP_DEBT: HECS / HELP annual statistics — total outstanding debt, indexation, compulsory + voluntary repayments, write-offs from 2005-06 to 2024-25. 8 measures × 20 years. Headline 2024-25: $125.3B total HECS debt.
-- TAX_GAPS: ATO tax-gap estimates by tax type (personal income, corporate, GST, excise) × financial year. 5 measures incl. tax expected, gross gap, net gap (dollars + rate). Headline 2022-23: $35.5B personal income tax gap (10.3% rate), $58B total missing tax across all categories.
-- RND_INCENTIVE: ATO R&D Tax Incentive 2022-23 — every entity's R&D claim with name, ABN, expenditure amount. ~13,000 entities. Top claimant: Atlassian $220.2M. Sector total $16.5B. Useful for fintech / VC due diligence / innovation policy.
-- ACNC_AIS_FINANCIALS: ACNC Annual Information Statement 2023 — per-charity financial detail: revenue (government / donations / goods/services / investments), expenses by type, staff counts (FT/PT/casual/FTE/volunteers), net surplus. ~60,000 charities × 23 measures. Companion to ACNC_REGISTER.
+## Tools
 
-## Filter shape
+- search_datasets(query, limit=10): Fuzzy search the 14 curated ATO/ACNC datasets
+- describe_dataset(dataset_id): Schema — filterable dimensions, measure keys with units, source URL
+- get_data(dataset_id, filters, measures, start_period, end_period, format): Filtered query
+- latest(dataset_id, filters, measures): Most recent observation per measure (mostly returns single-period for ATO wide tables; trims time series like GST_MONTHLY)
+- top_n(dataset_id, measure, n=10, filters, direction="top"): Rank rows by a measure server-side
+- stats(dataset_id, measure, filters, group_by): Aggregate (count/sum/mean/median/min/max/stddev) optionally partitioned by a dimension — one call instead of N filtered round-trips
+- list_curated(): Enumerate the 14 dataset IDs
 
-All filters are plain-English keys. Values are matched after a small alias resolver, e.g. {"state": "nsw"} resolves to "NSW" before matching.
+## Example queries
 
-Examples:
-- {"state": "nsw", "postcode": "2000"}
-- {"entity_name": "BHP IRON ORE (JIMBLEBAR) PTY LTD"}
-- {"industry_broad": "A. Agriculture, Forestry and Fishing"}
-- {"sex": "female", "age_range": "a. Under 18"}
-- {"state": "NSW", "charity_size": "Large"}
+- "What's the median taxable income in postcode 2000?"
+- "How much tax did BHP pay last year?"
+- "Top 10 corporate taxpayers in 2023-24"
+- "How many Large charities are there in NSW?"
+- "Average super contribution for under-30s in the top tax bracket"
+- "Monthly net GST since 2022"
+- "Compare median income across all NSW postcodes (grouped stats)"
+- "Top R&D Tax Incentive claimants in 2022-23"
 
-## Response shape
+## Optional
 
-Every tool returns the same envelope:
-{
-  dataset_id: str,
-  dataset_name: str,
-  query: dict,             # echo of inputs for debugging
-  period: {start, end},
-  unit: str | null,        # set when all records share a unit (AUD, Persons, etc.)
-  row_count: int,
-  records: [Observation],  # or list of series dicts when format="series"
-  csv: str | null,         # set when format="csv"
-  source: "Australian Taxation Office",
-  attribution: "Data sourced from ... CC BY 3.0 AU",
-  retrieved_at: ISO datetime,
-  ato_url: str,            # canonical data.gov.au URL
-  server_version: str,
-}
-
-Observation:
-{ period, value, measure, dimensions: dict, unit }
-
-## When to call which tool
-
-- Don't know the dataset ID? search_datasets("postcode") first.
-- Want to know what filters/measures a dataset supports? describe_dataset(...).
-- Want a time series or filtered slice? get_data(...).
-- Want only the most recent row(s)? latest(...).
-- Want to enumerate everything available? list_curated().
-
-## Common errors and what they mean
-
-- "Unknown filter 'X' for dataset Y" — the filter key isn't a curated dimension. Call describe_dataset(Y) to see valid keys.
-- "Unknown value 'X' for filter 'state'" — the value isn't a valid alias. The error message lists valid options.
-- "Unknown measure 'X' for dataset Y" — not a curated measure. describe_dataset for the list.
-- "end_period before start_period" — period order is wrong; swap them.
-
-## Caching
-
-Server caches downloaded resources under ~/.ato-mcp/cache.db. TTLs:
-- "data" (ATO annual files): 7 days
-- "register" (ACNC weekly register): 24 hours
-- "catalog" (CKAN metadata): 1 hour
-
-## Attribution
-
-Every response carries a CC BY 3.0 AU attribution string per the data.gov.au licence. Cite ATO and (for charity data) ACNC as the source, and link back to ato_url.
+- [Sister MCPs](https://github.com/Bigred97?tab=repositories&q=mcp): Other AU public-data MCPs (ABS, RBA, APRA, AIHW, ASIC, AEMO, weather, WGEA)
+- [aus-identity](https://pypi.org/project/aus-identity/): Postcode/state/ABN normalisation — every dataset's `state` and `postcode` filters accept canonical codes, full names, ISO 3166-2, and 4-digit postcodes

@@ -1,0 +1,302 @@
+# ato-mcp — full reference
+
+> MCP server exposing Australian Taxation Office and ACNC statistics through 7 plain-English tools.
+
+ato-mcp fetches ATO Taxation Statistics XLSX and the live ACNC charity register from data.gov.au via CKAN. 14 curated datasets cover the high-value publications. This document is a self-contained integration reference.
+
+---
+
+## Install
+
+```bash
+uvx --upgrade ato-mcp
+```
+
+### Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "ato": { "command": "uvx", "args": ["--upgrade", "ato-mcp"] }
+  }
+}
+```
+
+### Claude Code
+
+```bash
+claude mcp add ato --command uvx --args -- --upgrade ato-mcp
+```
+
+---
+
+## Trust contract
+
+Every `DataResponse` carries:
+
+```
+source             "Australian Taxation Office (ATO) + ACNC, via data.gov.au"
+source_url         the data.gov.au dataset page
+download_url       actual XLSX URL used (post-CKAN-discovery)
+attribution        full CC-BY 3.0 Australia attribution string with licence URL
+retrieved_at       UTC timestamp
+server_version     importlib.metadata.version("ato-mcp")
+stale              True when serving cached fallback after upstream error
+stale_reason       human-readable when stale=True
+truncated_at       int | None
+```
+
+Cache TTLs: 7-day data XLSX (annual ATO cadence), 24-hour register (ACNC weekly), 1-hour CKAN catalogue. ATO publishes Taxation Statistics ~annually each June.
+
+**CC-BY 3.0 Australia** (not 4.0 International) — matches APRA / ASIC / AIHW. ACNC charity data and ATO data both carry this licence.
+
+---
+
+## Tools
+
+### search_datasets(query, limit=10) — ranked discovery
+
+```python
+await search_datasets("postcode tax")
+# → [{id: 'IND_POSTCODE', name: 'Individuals by Postcode', ...}]
+```
+
+### describe_dataset(dataset_id)
+
+Returns `DatasetDetail` with id, name, description, period_coverage, dimensions, measures, source_url, download_url.
+
+### get_data(dataset_id, filters=None, measures=None, start_period=None, end_period=None, format="records")
+
+Plain-English filter keys. Period format: `YYYY` / `YYYY-MM` / ATO financial year `YYYY-YY` (e.g. `"2022-23"`).
+
+```python
+# Median taxable income in postcode 2000 (Sydney CBD)
+await get_data("IND_POSTCODE_MEDIAN",
+               filters={"state": "nsw", "postcode": "2000"},
+               measures="median_taxable_income_2022_23")
+
+# All registered charities in NSW with size = "Large"
+await get_data("ACNC_REGISTER",
+               filters={"state": "NSW", "charity_size": "Large"},
+               measures=["total_gross_income", "total_employees"])
+
+# 2023-24 corporate tax for entities with total income > $1B
+await get_data("CORP_TRANSPARENCY", filters={"income_year": "2023-24"})
+```
+
+### latest(dataset_id, filters=None, measures=None)
+
+For transposed time-series tables (GST_MONTHLY, SMSF_FUNDS, HELP_DEBT, TAX_GAPS) trims to the most-recent period. For wide single-year tables it returns the same shape as get_data (one period in those tables).
+
+```python
+await latest("GST_MONTHLY", measures="net_gst")
+```
+
+### top_n(dataset_id, measure, n=10, filters=None, direction="top")
+
+Server-side rank. The single most common agent workflow.
+
+```python
+# Top 10 corporate taxpayers in 2023-24
+await top_n("CORP_TRANSPARENCY", "tax_payable", n=10)
+
+# 20 NSW postcodes with the highest median income (2022-23)
+await top_n("IND_POSTCODE_MEDIAN", "median_taxable_income_2022_23",
+            filters={"state": "nsw"}, n=20)
+
+# 5 lowest-income postcodes in QLD
+await top_n("IND_POSTCODE_MEDIAN", "median_taxable_income_2022_23",
+            filters={"state": "qld"}, n=5, direction="bottom")
+```
+
+### stats(dataset_id, measure, filters=None, group_by=None)
+
+Aggregate statistics over a measure. Returns `{count, sum, mean, median, min, max, stddev}`. With `group_by`, partitions by a dimension and returns per-group stats — one call instead of N filtered round-trips. Caps at 200 groups.
+
+```python
+# Single aggregate over NSW postcodes
+await stats("IND_POSTCODE_MEDIAN", "median_taxable_income_2022_23",
+            filters={"state": "nsw"})
+# → {statistics: {count: 587, mean: 55017, median: 53484, ...}}
+
+# Stats grouped by state (one call instead of 8)
+await stats("IND_POSTCODE_MEDIAN", "median_taxable_income_2022_23",
+            group_by="state")
+# → {by: "state", groups: [
+#     {key: "ACT", statistics: {...}},
+#     {key: "NSW", statistics: {...}},
+#     ...]}
+
+# Tax payable per income year across the corporate sector
+await stats("CORP_TRANSPARENCY", "tax_payable", group_by="income_year")
+```
+
+### list_curated()
+
+```python
+list_curated()
+# → ['ACNC_AIS_FINANCIALS', 'ACNC_REGISTER', 'ATO_OCCUPATION',
+#    'COMPANY_INDUSTRY', 'CORP_TRANSPARENCY', 'GST_MONTHLY',
+#    'HELP_DEBT', 'IND_POSTCODE', 'IND_POSTCODE_MEDIAN',
+#    'RND_INCENTIVE', 'SBB_BENCHMARKS', 'SMSF_FUNDS',
+#    'SUPER_CONTRIB_AGE', 'TAX_GAPS']
+```
+
+---
+
+## Curated datasets (14)
+
+### IND_POSTCODE
+
+Personal tax stats by taxable status × state × SA4 × postcode. Taxation Statistics 2022-23, Table 6A.
+
+- coverage: ~5,200 postcodes, 80+ measures
+- filters: state, postcode, sa4, taxable_status, sex
+- update_frequency: annual
+
+### IND_POSTCODE_MEDIAN
+
+Median and average taxable income by postcode, every year 2003-04 to 2022-23.
+
+- coverage: ~2,300 postcodes × 21 yearly measures
+- measures: median_taxable_income_<year>, average_taxable_income_<year>
+- update_frequency: annual
+
+### COMPANY_INDUSTRY
+
+Company tax by ANZSIC broad + fine industry. Taxation Statistics Table 4A.
+
+- coverage: 216 industry cells
+- filters: industry_broad, industry_fine
+- update_frequency: annual
+
+### CORP_TRANSPARENCY
+
+Entity-level tax disclosures for $100M+ corporations.
+
+- coverage: ~4,200 entities (2023-24)
+- fields: entity_name, abn, total_income, taxable_income, tax_payable, income_year
+- update_frequency: annual
+
+### SUPER_CONTRIB_AGE
+
+Super contributions by age × sex × taxable income bracket. Taxation Statistics Table 23A.
+
+- period_coverage: 2022-23
+- filters: age_range, sex, taxable_income_band
+- measures: employer / personal / total contribution amounts
+
+### ACNC_REGISTER
+
+Live ACNC charity register.
+
+- coverage: ~60,000 entities × 69 fields
+- filters: state, charity_size (Extra Small / Small / Medium / Large), beneficiaries, operates_in_<state>
+- update_frequency: weekly
+
+### ACNC_AIS_FINANCIALS
+
+ACNC Annual Information Statement — per-charity financial detail.
+
+- coverage: ~60,000 charities × 23 measures
+- measures: revenue (government / donations / goods/services / investments), expenses by type, FT/PT/casual/FTE/volunteer staff counts, net_surplus
+- period_coverage: 2023
+
+### GST_MONTHLY
+
+Monthly GST / WET / LCT collections. Taxation Statistics Table 1B (transposed time-series layout).
+
+- coverage: 10 metrics × 48 months
+- period_coverage: 2020-07 → 2024-06
+- measures: gross_gst, input_tax_credits, net_gst, wet, lct, ...
+
+### ATO_OCCUPATION
+
+Individuals income (median / average; taxable / salary-wage / total) by ANZSCO 6-digit occupation × sex. Table 15A.
+
+- coverage: ~1,200 jobs × 3 sex categories
+- period_coverage: 2022-23
+
+### SMSF_FUNDS
+
+Self-managed super fund sector size — total funds, total members, total gross assets.
+
+- coverage: 3 metrics × 6 years
+- period_coverage: 2019-20 → 2024-25
+- Transposed-layout
+
+### SBB_BENCHMARKS
+
+ATO Small Business Benchmarks — total-expenses-to-income and cost-of-sales-to-income ratio bands (low/medium/high turnover) for ~100 small-business categories.
+
+- coverage: 12 measures × 100 industries
+- period_coverage: 2023-24
+- use case: tax-advisor / accounting practice benchmarking
+
+### HELP_DEBT
+
+HECS/HELP annual statistics.
+
+- coverage: 8 measures × 20 years
+- period_coverage: 2005-06 → 2024-25
+- measures: total_outstanding_debt, indexation, compulsory + voluntary repayments, write-offs
+- headline 2024-25: $125.3B total HECS debt
+
+### TAX_GAPS
+
+ATO tax-gap estimates by tax type × financial year.
+
+- coverage: 5 measures × 4 tax types (personal income, corporate, GST, excise) × ~7 years
+- measures: tax_expected, gross_gap, net_gap (dollars + rate)
+- headline 2022-23: $35.5B personal income tax gap (10.3% rate), $58B total
+
+### RND_INCENTIVE
+
+ATO R&D Tax Incentive transparency — every entity's R&D claim.
+
+- coverage: ~13,000 entities
+- period_coverage: 2022-23
+- fields: entity_name, abn, r_and_d_expenditure
+- use case: fintech / VC due diligence; innovation policy
+- 2022-23 sector total $16.5B; top claimant Atlassian $220.2M
+
+---
+
+## Worked example
+
+```python
+resp = await get_data("CORP_TRANSPARENCY",
+                      filters={"entity_name": "BHP IRON ORE"},
+                      measures=["total_income", "taxable_income", "tax_payable"])
+```
+
+→ `resp.records` has one observation per entity per measure, with `dimensions={entity_name, abn, income_year}`.
+
+---
+
+## Filter examples
+
+- `{"state": "nsw", "postcode": "2000"}`
+- `{"entity_name": "BHP IRON ORE (JIMBLEBAR) PTY LTD"}`
+- `{"industry_broad": "A. Agriculture, Forestry and Fishing"}`
+- `{"sex": "female", "age_range": "a. Under 18"}`
+- `{"state": "NSW", "charity_size": "Large"}`
+- `{"state": ["nsw", "vic"], "taxable_status": "taxable"}`
+
+State / postcode filters accept canonical codes, full names, ISO 3166-2, and 4-digit postcodes via [aus-identity](https://pypi.org/project/aus-identity/).
+
+---
+
+## Cross-source pairings
+
+- [abs-mcp](https://pypi.org/project/abs-mcp/) for ABS population denominators behind per-postcode tax rates
+- [rba-mcp](https://pypi.org/project/rba-mcp/) for cash rate / mortgage rates context against income / lending
+- [apra-mcp](https://pypi.org/project/apra-mcp/) for super fund stats (per-fund, alongside SUPER_CONTRIB_AGE)
+- [asic-mcp](https://pypi.org/project/asic-mcp/) for the same companies' ASIC registration status (match by ABN)
+- [aihw-mcp](https://pypi.org/project/aihw-mcp/) for postcode-level health expenditure paired with postcode incomes
+
+---
+
+## License
+
+ato-mcp server code is MIT-licensed. ATO and ACNC data carry CC-BY 3.0 Australia; the attribution is echoed on every response.
