@@ -1,0 +1,92 @@
+id: FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY
+name: Foreign Ownership of Australian Residential Land — by Country of Control
+description: |
+  Number of registered foreign-owned residential property interests in
+  Australia, by country of control. Source: ATO Register of Foreign
+  Ownership of Australian Assets — Residential Land workbook, Table 9.
+  Reporting periods: 30 June 2024 and 30 June 2025 (annual snapshot).
+
+  This is THE most-cited slice of the foreign-ownership register for
+  residential property — answers "which countries control the most
+  AU residential property?", "is Chinese foreign ownership growing
+  or shrinking?", "how does Hong Kong compare to Singapore for AU
+  residential investment?".
+
+  Customer audience: real-estate analysts (Domain, REA, CoreLogic),
+  property funds, FIRB-context policy researchers, journalists,
+  political offices, financial-planning teams.
+
+  Top countries at 30 June 2025 (registered interests count): China
+  22,272 · Hong Kong 3,396 · Singapore 1,978 · Malaysia 1,795 ·
+  Vietnam 1,658 · Japan 1,711 · India 1,235 · Indonesia 1,133 ·
+  UK 1,070 · Taiwan 979 · USA 484. China declined slightly from
+  23,550 in the 2024 snapshot.
+
+  For domestic ag-land foreign ownership history, see
+  FOREIGN_OWNERSHIP_AG_LAND. For total residential interests by
+  state and property type, see the other tables in the source XLSX
+  (not yet curated in this dataset).
+
+  Note on shape: transposed layout where each row is a Country and
+  each period (30 June 2024, 30 June 2025) is a column in the source
+  workbook. The shaping layer melts these into long-format
+  (country, period, value) records.
+period_coverage: 30 June 2024 and 30 June 2025 (annual snapshot, 2 periods)
+update_frequency: annual
+source_url: https://data.gov.au/data/dataset/register-of-foreign-ownership-of-australian-assets
+download_url: https://data.gov.au/data/dataset/00e08863-57e7-431a-b5b7-202f8ddd3112/resource/bbdde99b-25b2-4b92-9b2d-690c952c9e84/download/residential-land.xlsx
+format: xlsx
+sheet: "Table 9 Country "
+header_row: 10
+layout: transposed
+cache_kind: data
+metric_label_column: "Country"
+search_keywords:
+  - foreign ownership residential
+  - foreign property
+  - foreign buyers
+  - chinese property
+  - hong kong property
+  - singapore property
+  - foreign residential buyers
+  - foreign property investors
+  - country of control residential
+  - firb residential
+  - foreign home buyers
+  - australian property foreign
+discovery:
+  package_id: register-of-foreign-ownership-of-australian-assets
+  resource_name: Residential land
+columns:
+  country:
+    source_column: "Country"
+    description: Country of control of the registered foreign interest. ATO assigns control based on the ultimate registered owner; where the owner is a body corporate the country of control reflects where the controlling shares/interests reside.
+    role: dimension
+    dtype: string
+dimension_values:
+  country:
+    china: "People's Republic of China"
+    prc: "People's Republic of China"
+    hong_kong: "Hong Kong, SAR"
+    singapore: "Singapore"
+    malaysia: "Malaysia"
+    japan: "Japan"
+    vietnam: "Vietnam"
+    india: "India"
+    indonesia: "Indonesia"
+    united_kingdom: "United Kingdom"
+    uk: "United Kingdom"
+    taiwan: "Taiwan"
+    nepal: "Nepal"
+    united_states: "United States"
+    usa: "United States"
+    us: "United States"
+    canada: "Canada"
+    sri_lanka: "Sri Lanka"
+    south_korea: "Korea, (Republic of South Korea)"
+    korea: "Korea, (Republic of South Korea)"
+    south_africa: "South Africa"
+    france: "France"
+    cambodia: "Cambodia"
+    germany: "Germany"
+    bermuda: "Bermuda"

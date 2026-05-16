@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-05-16
+
+### Added — FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY
+
+- **`FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY` curated dataset.** Counts
+  of registered foreign-owned residential property interests in Australia
+  by country of control. Source: ATO Register of Foreign Ownership of
+  Australian Assets — Residential Land workbook, Table 9. 2 reporting
+  periods: 30 June 2024 + 30 June 2025.
+- Closes a real customer gap for real-estate analysts (Domain, REA,
+  CoreLogic), property funds, FIRB-context policy researchers,
+  journalists, political offices. Answers "which countries control
+  the most AU residential property?", "is Chinese foreign ownership
+  growing or shrinking?", "how does Hong Kong compare to Singapore for
+  AU residential investment?".
+- Top countries at 30 June 2025: China 22,272 (down from 23,550 in
+  2024) · Hong Kong 3,396 · Singapore 1,978 · Malaysia 1,795 ·
+  Japan 1,711 · Vietnam 1,658 · India 1,235 · Indonesia 1,133 ·
+  UK 1,070 · Taiwan 979 · USA 484.
+- 20 country aliases — pass `china`, `prc`, `hong_kong`, `uk`, `usa`,
+  `south_korea`, etc.
+- Uses existing transposed XLSX parser. YAML-only addition.
+
+### Customer-value validation (live ATO fetch, 2026-05-16)
+
+- Real-estate analyst: `latest('FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY',
+  measures='china')` → 22,272 interests (30 June 2025).
+- Search routing: "foreign property", "chinese property", "foreign home
+  buyers", "foreign residential" all hit
+  FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY at #1 (correctly
+  outranking FOREIGN_OWNERSHIP_AG_LAND for residential queries).
+
+### Tests
+
+- 314 unit tests passing (was 314). Ruff clean.
+
 ## [0.7.0] - 2026-05-16
 
 ### Added — FOREIGN_OWNERSHIP_AG_LAND (Register of Foreign Ownership)
