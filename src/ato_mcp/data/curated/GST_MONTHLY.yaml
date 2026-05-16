@@ -1,14 +1,21 @@
 id: GST_MONTHLY
-name: GST, WET & LCT Monthly Collections (Tax Stats 2022-23)
+name: GST, WET & LCT Monthly Collections (Historical — Jul 2020 to Jun 2023)
 description: |
+  ⚠️ HISTORICAL DATA — Jul 2020 to Jun 2023 only. ATO ceased publishing
+  the monthly GST/WET/LCT collections series after the 2022-23 release;
+  current monthly data is PDF-embedded in annual Taxation Statistics
+  reports and not machine-accessible. Use this dataset for COVID-era and
+  early post-COVID GST trend analysis only; do NOT cite as a live
+  collections feed.
+
   ATO Taxation Statistics GST Table 1B — monthly Goods and Services Tax,
   Wine Equalisation Tax, and Luxury Car Tax collections from July 2020
   forward. Transposed-layout time series: each row is a metric (Net GST,
   Gross GST, Input tax credits, WET, LCT), each column is a month.
-  The fastest way to ask "what's monthly net GST?" or "show me the GST
-  trend since COVID".
-  Source: ATO Taxation Statistics, dataset on data.gov.au.
-period_coverage: 2020-07 to 2023-06
+  Useful for "how did GST collections trend from COVID lockdown through
+  2023?" — the dataset ends June 2023.
+  Source: ATO Taxation Statistics 2022-23, on data.gov.au.
+period_coverage: 2020-07 to 2023-06 (historical archive only)
 update_frequency: annual
 source_url: https://data.gov.au/data/dataset/taxation-statistics-2022-23
 download_url: https://data.gov.au/data/dataset/03326c3f-c0d3-4af4-afc7-c6ccc0a02223/resource/b73b6ab3-41f7-49c1-ae76-c4290f61d862/download/ts23gst01gstwetlctbyyearmonth.xlsx

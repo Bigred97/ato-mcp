@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-05-16
+
+### Changed — historical dataset flagged in description
+
+- `GST_MONTHLY` description and `period_coverage` updated to prominently
+  warn that the dataset covers July 2020 to June 2023 only. ATO ceased
+  publishing the monthly GST/WET/LCT collections series after the
+  2022-23 Taxation Statistics release; current monthly data lives in
+  PDF-embedded tables in annual reports and is not machine-accessible.
+- Description now positions the dataset for "COVID-era to early
+  post-COVID GST trend analysis" rather than a live collections feed.
+
+No data, code, or test changes. Description-only update so clients see
+the historical nature of the data in `describe_dataset` output.
+
 ## [0.6.0] - 2026-05-15
 
 ### Added
