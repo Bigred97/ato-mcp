@@ -1,0 +1,90 @@
+id: FOREIGN_OWNERSHIP_AG_LAND
+name: Foreign Ownership of Australian Agricultural Land (Annual)
+description: |
+  Annual national-level statistics on foreign ownership of Australian
+  agricultural land, sourced from the ATO Register of Foreign Ownership
+  of Australian Assets (commenced 1 July 2023; pre-2023 figures from
+  the predecessor Agricultural Land Register).
+
+  10 annual snapshots from 30 June 2016 to 30 June 2025 (current). For
+  each year: hectares of agricultural land held with a foreign interest,
+  total Australian agricultural land (ABS estimate), and the resulting
+  foreign-ownership share as a percentage of total. The ABS source
+  dataset used in the denominator is recorded too (alternates between
+  REACS and Census years).
+
+  Use this for: foreign-investment analysts tracking the long arc of
+  foreign capital in AU agriculture, M&A advisers on agribusiness
+  deals, agricultural land valuers, journalists, public-policy
+  researchers, and any FIRB-context query. Headline result for 30 June
+  2025: 13.0% of Australian agricultural land has a foreign interest
+  (50.3M of 387M hectares). Trend: peaked at 14.1% in 2021, dropped
+  to 12.3% in 2022 (post-COVID divestments), has since recovered to ~13%.
+
+  Source: ATO Register of Foreign Ownership of Australian Assets,
+  Agricultural Land workbook (Level of foreign ownership sheet).
+
+  Note on shape: this is a wide-layout dataset where the year-end
+  snapshot lives in the `year` dimension on each Observation, not in
+  the response's top-level `period` field. `latest()` returns all 10
+  rows; sort by `record.dimensions["year"]` client-side to find the
+  latest. This matches the existing ato-mcp pattern for annual
+  wide-layout datasets (HELP_DEBT, SMSF_FUNDS).
+period_coverage: 30 June 2016 to 30 June 2025 (annual)
+update_frequency: annual
+source_url: https://data.gov.au/data/dataset/register-of-foreign-ownership-of-australian-assets
+download_url: https://data.gov.au/data/dataset/00e08863-57e7-431a-b5b7-202f8ddd3112/resource/121753e8-023f-45c1-afda-c0f407e5bf27/download/agricultural-land.xlsx
+format: xlsx
+sheet: "Level of foreign ownership "
+header_row: 6
+layout: wide
+cache_kind: data
+period_column: year
+search_keywords:
+  - foreign ownership
+  - foreign investment
+  - foreign owned land
+  - agricultural land
+  - farmland
+  - foreign farmland
+  - foreign ownership register
+  - firb
+  - foreign investment review board
+  - foreign agricultural
+  - foreign owned farms
+  - chinese ownership
+  - investor land
+  - foreign capital
+  - register of foreign ownership
+discovery:
+  package_id: register-of-foreign-ownership-of-australian-assets
+  resource_name: Agricultural Land
+columns:
+  year:
+    source_column: "Year"
+    description: Year-end snapshot date (always 30 June).
+    role: dimension
+    dtype: date
+  foreign_held_hectares:
+    source_column: "Registered interest in agricultural land (million hectares)"
+    description: Total hectares of Australian agricultural land with a registered foreign interest. NOTE the source header says "million hectares" but values are in raw hectares (e.g. 50,262,369 = 50.26 million ha for 2025).
+    unit: Hectares
+    role: measure
+    dtype: float
+  total_aust_ag_land_million_ha:
+    source_column: "Total Australian agricultural land (ABS) (million hectares)"
+    description: Total Australian agricultural land in million hectares, per the ABS source dataset used in the denominator.
+    unit: Million hectares
+    role: measure
+    dtype: float
+  foreign_ownership_pct:
+    source_column: "Level of foreign ownership (%)"
+    description: Foreign-owned share as a % of total Australian agricultural land. The headline statistic.
+    unit: Per cent
+    role: measure
+    dtype: float
+  abs_source_dataset:
+    source_column: "ABS data set"
+    description: ABS data product used for the denominator (alternates between REACS and Census).
+    role: dimension
+    dtype: string

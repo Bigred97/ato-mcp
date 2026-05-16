@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-05-16
+
+### Added — FOREIGN_OWNERSHIP_AG_LAND (Register of Foreign Ownership)
+
+- **`FOREIGN_OWNERSHIP_AG_LAND` curated dataset.** 10 annual snapshots
+  (30 June 2016 → 30 June 2025) of foreign-owned share of Australian
+  agricultural land from the ATO Register of Foreign Ownership of
+  Australian Assets (commenced 1 July 2023; pre-2023 figures from the
+  predecessor Agricultural Land Register).
+- Headline statistic: as of 30 June 2025, **13.0% of Australian
+  agricultural land has a foreign interest** (50.3M of 387M hectares).
+  Peaked at 14.1% in 2021, dropped to 12.3% in 2022 post-COVID
+  divestments, has since recovered to ~13%.
+- Closes a real customer gap for foreign-investment analysts, M&A
+  advisers on agribusiness deals, agricultural land valuers, real-
+  estate firms tracking foreign capital, and FIRB-context queries.
+  Search routes "foreign ownership", "foreign farmland", "firb",
+  "foreign agricultural" all to FOREIGN_OWNERSHIP_AG_LAND at #1.
+- Uses existing XLSX wide-layout parser with CKAN auto-discovery.
+  YAML-only addition; no new code paths.
+- Note: wide-layout datasets surface period in
+  `observation.dimensions["year"]` rather than as the response's
+  top-level `period` field (matches existing HELP_DEBT / SMSF_FUNDS
+  pattern). YAML description documents this for client developers.
+
+### Customer-value validation (live ATO fetch, 2026-05-16)
+
+- Foreign-investment analyst: 10-row time series 2016-2025 returns
+  13.6 / 13.6 / 13.4 / 13.8 / 13.8 / 14.1 / 12.3 / 12.9 / 12.7 / 13.0%.
+- Hectares: 52.1M ha foreign-held at 30 June 2016; 50.3M at 30 June 2025.
+- Search routing: 5/5 foreign-ownership related queries hit
+  FOREIGN_OWNERSHIP_AG_LAND at #1.
+
+### Tests
+
+- 314 unit tests passing (was 314). 10× zero-flake gauntlet. Ruff clean.
+
+### Note on register coverage
+
+ATO's foreign-ownership register also publishes 5 other asset classes
+(Business interests, Commercial land, Mining/exploration tenements,
+Residential land, Water interests). Only Agricultural Land has a
+multi-year national time series (2016+); the others started with the
+consolidated register on 1 July 2023. Adding the remaining 5 as
+separate curated datasets is a natural follow-up iteration.
+
 ## [0.6.1] - 2026-05-16
 
 ### Changed — historical dataset flagged in description
