@@ -67,7 +67,7 @@ async def test_get_data_unknown_id():
 
 @pytest.mark.asyncio
 async def test_get_data_filters_must_be_dict():
-    with pytest.raises(ValueError, match="filters must be a dict"):
+    with pytest.raises(ValueError, match="filters must be"):
         await server.get_data(
             "CORP_TRANSPARENCY", filters=["state", "nsw"],  # type: ignore[arg-type]
         )

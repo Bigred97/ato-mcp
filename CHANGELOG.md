@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2026-05-16
+
+### Fixed — JSON-string `filters` parameter (portfolio-wide)
+
+The MCP protocol JSON-encodes dict parameters before they reach the
+server. `_validate_filters` was checking `isinstance(filters, dict)`
+before parsing the JSON string, so every call of the form
+`get_data(filters={"state":"nsw"})` from a real MCP client was rejected.
+Fix: decode JSON-string filters before the type check. Coordinated
+patch across the portfolio (abs 0.9.2, ato 0.8.2, apra 0.8.2, asic 0.6.1,
+aihw 0.4.2, wgea 0.5.1, aemo 0.4.2).
+
 ## [0.8.1] - 2026-05-16
 
 ### Fixed
