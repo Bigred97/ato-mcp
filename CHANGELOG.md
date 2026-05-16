@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-05-16
+
+### Fixed
+
+- `FOREIGN_OWNERSHIP_AG_LAND`: `foreign_held_hectares` (raw Ha) renamed to
+  `foreign_held_million_ha` and normalised to million hectares — now in
+  consistent units with `total_aust_ag_land_million_ha`. Previous column
+  pairing caused ~1,000,000× scale errors in customer-computed ratios
+  (e.g. `foreign / total` returned 130,000 instead of ~0.13). The
+  normalisation runs in `shaping._normalise_units` so other datasets are
+  unaffected.
+
+### Added
+
+- `@pytest.mark.live` integration tests for `FOREIGN_OWNERSHIP_AG_LAND` and
+  `FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY` with range-check assertions:
+  AG-land verifies every year's `foreign_held_million_ha /
+  total_aust_ag_land_million_ha ≈ foreign_ownership_pct / 100` invariant
+  (closes the units gap); residential verifies China is consistently the
+  highest-count country and all counts land in the 0-100,000 register
+  ceiling.
+
 ## [0.8.0] - 2026-05-16
 
 ### Added — FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY

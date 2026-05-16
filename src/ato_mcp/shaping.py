@@ -120,6 +120,38 @@ def _to_clean_string(series: pd.Series) -> pd.Series:
     return series.astype("string").str.strip()
 
 
+# Per-dataset post-coercion unit normalisations.
+#
+# Some upstream XLSX columns ship in units inconsistent with their YAML
+# header (a known data-quality bug at the source). We fix these in one place
+# so customer-computed ratios across columns Just Work.
+#
+# Format: {dataset_id: {column_alias: divisor}}.
+#   - column_alias must already exist in the renamed DataFrame (post `_apply_aliases`).
+#   - divisor is applied as `df[col] / divisor`.
+_UNIT_NORMALISATIONS: dict[str, dict[str, float]] = {
+    # `Registered interest in agricultural land (million hectares)` is shipped
+    # in raw hectares (~50M) despite the header. Divide by 1M so the column
+    # `foreign_held_million_ha` matches `total_aust_ag_land_million_ha` in units.
+    "FOREIGN_OWNERSHIP_AG_LAND": {"foreign_held_million_ha": 1_000_000.0},
+}
+
+
+def _normalise_units(df: pd.DataFrame, cd: CuratedDataset) -> pd.DataFrame:
+    """Apply per-dataset unit corrections to numeric columns.
+
+    Runs after `_coerce_dtypes` so the targeted columns are already numeric.
+    No-op for datasets without an entry in `_UNIT_NORMALISATIONS`.
+    """
+    rules = _UNIT_NORMALISATIONS.get(cd.id)
+    if not rules:
+        return df
+    for col, divisor in rules.items():
+        if col in df.columns and divisor:
+            df[col] = pd.to_numeric(df[col], errors="coerce") / divisor
+    return df
+
+
 def _apply_filters(
     df: pd.DataFrame, cd: CuratedDataset, filters: dict[str, Any]
 ) -> pd.DataFrame:
@@ -456,7 +488,8 @@ def build_response(
     """
     renamed = _apply_aliases(df, cd)
     coerced = _coerce_dtypes(renamed, cd)
-    filtered = _apply_filters(coerced, cd, filters)
+    normalised = _normalise_units(coerced, cd)
+    filtered = _apply_filters(normalised, cd, filters)
 
     measure_keys = resolve_measure_keys(cd, measures)
 
