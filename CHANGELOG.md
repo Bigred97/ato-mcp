@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.5] - 2026-05-16
+
+### Performance — extend the streaming-CSV path to `ACNC_REGISTER`
+
+The user's live API testing hit the same OOM / timeout pattern on
+`ACNC_REGISTER` (the ~50MB / 69-column / 65k-row charity register) that
+motivated the 0.8.4 fix for `ACNC_AIS_FINANCIALS`. Same shape of CSV,
+same Python-object memory blowup when loaded whole via `pd.read_csv`.
+Routed `ACNC_REGISTER` through `parsing.read_csv_streaming` by adding
+it to the `_STREAMING_CSV_DATASETS` set in `server._fetch_and_parse` —
+no parsing-layer changes needed; the column-projected streaming reader
+introduced in 0.8.4 was already generic enough to handle this dataset.
+
+Verified against the live source: `get_data("ACNC_REGISTER")` returns
+65,566 rows in ~12s with peak parser memory ~140MB (pre-fix: OOM /
+indefinite hang on 512MB hosts). `ACNC_AIS_FINANCIALS` continues to
+work unchanged (verified post-fix: 53,350 rows / ~20s / ~180MB peak).
+
+Added a dedicated `tests/test_acnc_register.py` with:
+- `test_acnc_register_streams_under_memory_budget` — tracemalloc budget
+  on the 30KB head fixture; catches a regression where the column
+  projection silently breaks.
+- `test_acnc_register_get_data_path_uses_streaming_reader` — pins the
+  server-dispatch wiring so removing `ACNC_REGISTER` from
+  `_STREAMING_CSV_DATASETS` fails the suite immediately.
+- `test_acnc_register_streaming_preserves_all_curated_columns` — every
+  curated source column survives the streaming-read projection.
+
 ## [0.8.4] - 2026-05-16
 
 ### Performance — `ACNC_AIS_FINANCIALS` parsing (production-blocking OOM fix)

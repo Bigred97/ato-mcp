@@ -38,7 +38,10 @@ from .shaping import build_response
 #
 # - ACNC_AIS_FINANCIALS: 36MB / 91 columns / 50k+ rows. Full pd.read_csv()
 #   peaks at ~1.15GB; projected to ~23 curated columns it peaks <100MB.
-_STREAMING_CSV_DATASETS = frozenset({"ACNC_AIS_FINANCIALS"})
+# - ACNC_REGISTER: ~50MB / 69 columns / 65k+ rows. Same OOM shape — only
+#   ~22 of 69 source columns are curated, so the projection saves the
+#   same ~3x peak-memory factor (added in 0.8.5).
+_STREAMING_CSV_DATASETS = frozenset({"ACNC_AIS_FINANCIALS", "ACNC_REGISTER"})
 
 # Curated IDs are uppercase letters + digits + underscore.
 _DATASET_ID_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
