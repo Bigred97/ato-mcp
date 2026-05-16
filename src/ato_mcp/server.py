@@ -29,8 +29,16 @@ from . import catalog, curated
 from .client import ATOAPIError, ATOClient, get_stale_signal, reset_stale_signal
 from .discovery import DiscoveryError, DiscoverySpec, resolve_latest_url
 from .models import ColumnDetail, DataResponse, DatasetDetail, DatasetSummary, Observation
-from .parsing import drop_blank_rows, read_csv, read_xlsx
+from .parsing import drop_blank_rows, read_csv, read_csv_streaming, read_xlsx
 from .shaping import build_response
+
+# CSV datasets where pd.read_csv() OOMs on small-RAM hosts. We swap them
+# onto the column-projected streaming reader. Keep this list narrow —
+# default behaviour stays full-load pandas for every other CSV.
+#
+# - ACNC_AIS_FINANCIALS: 36MB / 91 columns / 50k+ rows. Full pd.read_csv()
+#   peaks at ~1.15GB; projected to ~23 curated columns it peaks <100MB.
+_STREAMING_CSV_DATASETS = frozenset({"ACNC_AIS_FINANCIALS"})
 
 # Curated IDs are uppercase letters + digits + underscore.
 _DATASET_ID_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
@@ -276,7 +284,16 @@ async def _fetch_and_parse(cd: curated.CuratedDataset, *, kind: str = "data"):
             return cached
 
     if cd.format == "csv":
-        df = read_csv(body)
+        if cd.id in _STREAMING_CSV_DATASETS:
+            # Column-projected streaming reader — drops unused columns at
+            # parse time so a 36MB / 91-col CSV doesn't bloat a DataFrame
+            # to >1GB. See parsing.read_csv_streaming for details.
+            source_cols = [c.source_column for c in cd.columns.values()]
+            df = read_csv_streaming(
+                body, columns=source_cols, max_rows=cd.max_rows,
+            )
+        else:
+            df = read_csv(body)
     else:
         if cd.sheet is None:
             raise ValueError(

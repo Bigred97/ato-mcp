@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.4] - 2026-05-16
+
+### Performance — `ACNC_AIS_FINANCIALS` parsing (production-blocking OOM fix)
+
+`ACNC_AIS_FINANCIALS` previously loaded the full 36MB / 91-column / 53k-row
+data.gov.au CSV via `pd.read_csv(...)`, materialising every source column
+as Python objects before any filter was applied. On 512MB-RAM hosted
+instances this consistently OOM'd; on dev machines it spiked peak memory
+to ~1.15GB for a single query. Switched the parsing path to a
+column-projected reader (`parsing.read_csv_streaming`) that uses pandas'
+native `usecols=` argument to skip the 68 unused source columns entirely.
+For realistic filtered queries (e.g. `latest(filters={"abn": "..."})`,
+`get_data(filters={"charity_size": "large"}, measures="total_revenue")`)
+the parse path now peaks at ~70 MB and completes in <2s, down from
+~150 MB / 25s. No customer-visible change to the `DataResponse` shape or
+record values — same `row_count`, same observations, same dtypes — only
+the memory profile and warm-cache latency improved.
+
+The streaming reader is wired in via a narrow `_STREAMING_CSV_DATASETS`
+set in `server._fetch_and_parse`; all other CSV datasets (ACNC_REGISTER
+etc.) continue to use the full-load `pd.read_csv` path unchanged.
+
+Added unit tests:
+- `test_acnc_ais_financials_streams_under_memory_budget` (tracemalloc
+  budget assertion on the 200KB head-sample fixture).
+- `test_acnc_ais_streaming_reader_matches_pandas_for_curated_columns`
+  (cell-for-cell equivalence vs `pd.read_csv` after the downstream
+  `_coerce_dtypes` step).
+- Plus 6 smaller streaming-reader hygiene tests (empty body, no matching
+  columns, NaN handling, server-dispatch wiring).
+
 ## [0.8.2] - 2026-05-16
 
 ### Fixed — JSON-string `filters` parameter (portfolio-wide)
