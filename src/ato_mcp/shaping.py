@@ -32,7 +32,6 @@ from .curated import (
 )
 from .models import DataResponse, Observation
 
-
 # Portfolio-wide hard ceiling on response record count. Wide-layout
 # datasets like ACNC_AIS_FINANCIALS can produce 853k records (53k
 # charities × 16 measures), which overflows the ausdata-api 20s

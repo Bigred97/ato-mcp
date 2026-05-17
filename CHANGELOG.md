@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.15] - 2026-05-18
+
+### Fixed — CI lint failure (unused `rapidfuzz.process` import)
+
+0.8.14 release CI failed lint because the two-pool/three-pool ranker
+refactor in 0.8.12 left `from rapidfuzz import fuzz, process` behind
+after dropping `process.extract`. Re-shipping with the import cleaned
+up and the catalog/shaping import block normalised by `ruff --fix`.
+
+No runtime change vs 0.8.14 — just unblocks the OIDC publish workflow.
+
 ## [0.8.14] - 2026-05-18
 
 ### Fixed — latest() now caps register-shaped datasets

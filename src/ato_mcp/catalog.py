@@ -8,7 +8,7 @@ arbitrary ATO datasets via CKAN.
 """
 from __future__ import annotations
 
-from rapidfuzz import fuzz, process
+from rapidfuzz import fuzz
 
 from . import curated as curated_mod
 from .models import DatasetSummary
