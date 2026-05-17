@@ -649,6 +649,24 @@ async def get_data(
             examples=["records", "series", "csv"],
         ),
     ] = "records",
+    limit: Annotated[
+        int | None,
+        Field(
+            description=(
+                "Optional cap on number of records returned. Useful for "
+                "register-shaped datasets where a slice can still be very "
+                "large (ACNC_AIS_FINANCIALS = ~50k charities × 16 measures = "
+                "800k+ records; ACNC_REGISTER = ~65k charities). Without a "
+                "cap the response can blow an agent's context window. "
+                "Truncated responses set DataResponse.truncated_at to the "
+                "original row count. Default None = no cap (subject to the "
+                "portfolio-wide 100k hard ceiling for pathological cases)."
+            ),
+            ge=1,
+            le=100000,
+            examples=[100, 500, 5000],
+        ),
+    ] = None,
 ) -> DataResponse:
     """Query a curated ATO/ACNC dataset and return observations.
 
@@ -667,15 +685,23 @@ async def get_data(
             measures=["total_gross_income", "total_employees"],
         )
 
+        # 500 ACNC charity financial records (huge dataset — cap to fit context)
+        resp = await get_data(
+            "ACNC_AIS_FINANCIALS",
+            filters={"state": "NSW"},
+            limit=500,
+        )
+
         # 2023-24 corporate tax payable for entities with total income > $1B
         resp = await get_data("CORP_TRANSPARENCY", filters={"income_year": "2023-24"})
 
     Returns:
         DataResponse with records (or csv), unit, period bounds, row_count,
-        source URL, and CC-BY attribution.
+        source URL, and CC-BY attribution. `truncated_at` is set when the
+        underlying slice was larger than `limit`.
     """
     return await _get_data_impl(
-        dataset_id, filters, measures, start_period, end_period, format
+        dataset_id, filters, measures, start_period, end_period, format, limit=limit
     )
 
 

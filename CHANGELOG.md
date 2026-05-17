@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.16] - 2026-05-18
+
+### Added — `limit` parameter on `get_data` for register-shaped datasets
+
+Customer-sim flagged ACNC_AIS_FINANCIALS as gateway-blocked because
+the underlying slice is huge (~50k charities × 16 measures = 800k+
+records). The portfolio-wide `_HARD_MAX_RECORDS=100,000` cap kicked
+in, but the gateway needed a customer-facing way to ask for a smaller
+slice without forcing the agent through `latest()`.
+
+Added `limit: int | None = None` parameter to `get_data`. Truncated
+responses set `DataResponse.truncated_at` to the original row count.
+The hard 100k ceiling remains for callers that don't pass `limit`.
+
+### Fixed — short-query ranker misses ('GST' losing to TAX_GAPS)
+
+Single-token queries ('gst', 'abn', 'super') were length-penalised by
+`token_set_ratio` against long dataset names — `token_set_ratio('gst',
+'GST_MONTHLY GST, WET & LCT Monthly Collections...')` returns ~7 even
+though "gst" appears twice in the haystack. TAX_GAPS (which has 'gst gap'
+as a keyword but doesn't contain "gst" in its name) was winning short
+queries because of slight name_high advantages from comparable token
+counts.
+
+For queries with ≤2 tokens we now ALSO compute `partial_ratio` (substring
+overlap) and take the max of `token_set_ratio` and `partial_ratio` for
+the name_high pool. Substring matches now score 100 regardless of name
+length, so single-keyword queries find their canonical dataset.
+
+Verification:
+- 'gst' → GST_MONTHLY at 100, TAX_GAPS at 79.7 (was TAX_GAPS at 76.5
+  beating GST_MONTHLY at 71.1)
+- 'super' → SMSF_FUNDS + SUPER_CONTRIB_AGE both at 100 (both legitimate)
+- 'GST collections' → GST_MONTHLY alone at 100
+- 'company tax' → COMPANY_INDUSTRY alone at 100
+
+326 unit tests pass.
+
 ## [0.8.15] - 2026-05-18
 
 ### Fixed — CI lint failure (unused `rapidfuzz.process` import)

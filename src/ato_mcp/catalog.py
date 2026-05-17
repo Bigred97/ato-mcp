@@ -71,12 +71,24 @@ def search(query: str, limit: int = 10) -> list[DatasetSummary]:
 
     keyword_lookup = {cd.id: " ".join(cd.search_keywords) for cd in curated_mod.list_all()}
     query_lc = query.lower()
+    # Short single-token queries ('gst', 'abn', 'super') get poor
+    # token_set_ratio scores against long names because the ratio is
+    # length-penalised — `token_set_ratio('gst', 'GST_MONTHLY GST, WET
+    # & LCT Monthly Collections (Historical — ...)')` returns ~7 even
+    # though "gst" appears twice. For queries with ≤2 tokens we ALSO
+    # compute partial_ratio (substring-overlap) and take the max so
+    # short queries find their canonical dataset by name even when the
+    # name has lots of additional context tokens.
+    q_token_count = len([t for t in query_lc.split() if t.strip()])
+    use_partial_supplement = q_token_count <= 2
     candidates: list[tuple[float, float, int]] = []
     for i, s in enumerate(summaries):
         name_str = f"{s.id} {s.name}".lower()
         kw_str = f"{name_str} {keyword_lookup.get(s.id, '')}".lower()
         desc_str = (s.description or "").lower()
         name_high = fuzz.token_set_ratio(query_lc, name_str)
+        if use_partial_supplement:
+            name_high = max(name_high, fuzz.partial_ratio(query_lc, name_str))
         kw_high = fuzz.token_set_ratio(query_lc, kw_str)
         desc_raw = fuzz.WRatio(query_lc, desc_str) if desc_str else 0
         desc = min(desc_raw, DESCRIPTION_CAP)
