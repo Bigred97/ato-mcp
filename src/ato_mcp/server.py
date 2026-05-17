@@ -109,12 +109,12 @@ def _normalize_dataset_id(dataset_id: Any) -> str:
     if not isinstance(dataset_id, str):
         raise ValueError(
             f"dataset_id must be a string, got {type(dataset_id).__name__}. "
-            "Try search_datasets() or list_curated() to discover IDs."
+            "Search by keyword or enumerate the curated set to discover IDs."
         )
     norm = dataset_id.strip().upper()
     if not norm:
         raise ValueError(
-            "dataset_id is empty. Try list_curated() to see available IDs."
+            "dataset_id is empty. Enumerate the curated set to see available IDs."
         )
     if not _DATASET_ID_PATTERN.match(norm):
         raise ValueError(
@@ -211,14 +211,14 @@ def _validate_measures(measures: Any) -> str | list[str] | None:
             if not isinstance(m, str):
                 raise ValueError(
                     f"measures list entries must be strings, got {type(m).__name__}. "
-                    "Try a measure key from describe_dataset(). "
+                    "Use a measure key from the dataset's describe surface. "
                     "Example: measures=['total_income', 'tax_payable']."
                 )
             s = m.strip()
             if not s:
                 raise ValueError(
                     "measures list contains an empty string. "
-                    "Try a measure key from describe_dataset() — "
+                    "Use a measure key from the dataset's describe surface — "
                     "e.g. measures=['total_income', 'tax_payable'] — "
                     "or omit `measures` to return all."
                 )
@@ -226,7 +226,7 @@ def _validate_measures(measures: Any) -> str | list[str] | None:
         return out
     raise ValueError(
         f"measures must be a string or list of strings, got {type(measures).__name__}. "
-        "Try describe_dataset(dataset_id) to discover valid measure keys. "
+        "Use the describe endpoint or describe tool to discover valid measure keys. "
         "Example: measures='total_income' or measures=['total_income', 'tax_payable']."
     )
 
@@ -286,24 +286,31 @@ async def _fetch_and_parse(cd: curated.CuratedDataset, *, kind: str = "data"):
             _df_cache.move_to_end(cache_key)
             return cached
 
+    # Run sync pandas/openpyxl parse off the event loop. The largest
+    # ATO/ACNC CSVs (ACNC_AIS_FINANCIALS ~36MB / 91 cols / 50k+ rows) and
+    # XLSX files block the async tool for seconds otherwise, serialising
+    # every concurrent request behind one parse and stalling downstream
+    # consumers like the ausdata-api gateway.
     if cd.format == "csv":
         if cd.id in _STREAMING_CSV_DATASETS:
             # Column-projected streaming reader — drops unused columns at
             # parse time so a 36MB / 91-col CSV doesn't bloat a DataFrame
             # to >1GB. See parsing.read_csv_streaming for details.
             source_cols = [c.source_column for c in cd.columns.values()]
-            df = read_csv_streaming(
+            df = await asyncio.to_thread(
+                read_csv_streaming,
                 body, columns=source_cols, max_rows=cd.max_rows,
             )
         else:
-            df = read_csv(body)
+            df = await asyncio.to_thread(read_csv, body)
     else:
         if cd.sheet is None:
             raise ValueError(
                 f"Dataset {cd.id!r} declares format='xlsx' but has no sheet name. "
                 "Fix the curated YAML."
             )
-        df = read_xlsx(
+        df = await asyncio.to_thread(
+            read_xlsx,
             body,
             sheet=cd.sheet,
             header_row=cd.header_row,
@@ -385,13 +392,13 @@ async def search_datasets(
         raise ValueError(
             f"limit must be a positive integer, got {limit!r} ({type(limit).__name__}). "
             "Try limit=10 (default) or any int between 1 and 50. "
-            "Example: search_datasets('postcode', limit=5)."
+            "Example: limit=5 with query='postcode'."
         )
     if limit < 1:
         raise ValueError(
             f"limit must be >= 1, got {limit}. "
             "Try limit=10 (default) or any int between 1 and 50. "
-            "Example: search_datasets('postcode', limit=5)."
+            "Example: limit=5 with query='postcode'."
         )
     return catalog.search(query, limit=limit)
 
@@ -434,8 +441,8 @@ async def describe_dataset(
         raise ValueError(
             f"Dataset {dataset_id!r} is not a curated ato-mcp dataset. "
             f"{suggestion}"
-            "Try list_curated() to see all available IDs, or "
-            "search_datasets('keyword') to fuzzy-find by topic."
+            "Enumerate the curated set to see all available IDs, or "
+            "search by keyword to fuzzy-find by topic."
         )
     dims_out = [
         ColumnDetail(
@@ -492,8 +499,8 @@ async def _get_data_impl(
         raise ValueError(
             f"Dataset {dataset_id!r} is not a curated ato-mcp dataset. "
             f"{suggestion}"
-            "Try list_curated() to see all available IDs, or "
-            "search_datasets('keyword') to fuzzy-find by topic."
+            "Enumerate the curated set to see all available IDs, or "
+            "search by keyword to fuzzy-find by topic."
         )
     filters_d = _validate_filters(filters)
     measures_v = _validate_measures(measures)
@@ -777,7 +784,7 @@ async def top_n(
     if not isinstance(measure, str) or not measure.strip():
         raise ValueError(
             "measure is required and must be a non-empty string. "
-            "Use describe_dataset() to see available measure keys."
+            "Use the describe endpoint or describe tool to see available measure keys."
         )
     if isinstance(n, bool) or not isinstance(n, int):
         raise ValueError(
@@ -917,12 +924,12 @@ async def stats(
     if not isinstance(measure, str) or not measure.strip():
         raise ValueError(
             "measure is required and must be a non-empty string. "
-            "Use describe_dataset() to see available measure keys."
+            "Use the describe endpoint or describe tool to see available measure keys."
         )
     if group_by is not None and (not isinstance(group_by, str) or not group_by.strip()):
         raise ValueError(
             "group_by must be a non-empty string naming a dimension "
-            "(or None / omitted). See describe_dataset() for valid dimensions."
+            "(or None / omitted). See the describe endpoint or describe tool for valid dimensions."
         )
 
     # Reuse the normal data path so all filter / measure / dtype / validation
@@ -958,8 +965,8 @@ async def stats(
         raise ValueError(
             f"Dataset {dataset_id!r} is not a curated ato-mcp dataset. "
             f"{suggestion}"
-            "Try list_curated() to see all available IDs, or "
-            "search_datasets('keyword') to fuzzy-find by topic."
+            "Enumerate the curated set to see all available IDs, or "
+            "search by keyword to fuzzy-find by topic."
         )
     valid_dim_keys = {c.key for c in cd.columns.values() if c.role in ("dimension", "id")}
     if group_by not in valid_dim_keys:
@@ -971,7 +978,7 @@ async def stats(
             f"Unknown group_by {group_by!r} for dataset {cd.id!r}. "
             f"{hint}"
             f"Valid options: {', '.join(valid_sorted[:10])}{more}. "
-            f"Try describe_dataset({cd.id!r}) for full dimension details."
+            f"Use the describe endpoint or describe tool for full dimension details on {cd.id!r}."
         )
 
     buckets: dict[str, list[float]] = {}

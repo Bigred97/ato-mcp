@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.6] - 2026-05-17
+
+### Fixed — event-loop blocking on sync CSV/XLSX parse
+
+`_fetch_and_parse` called `read_csv` / `read_csv_streaming` / `read_xlsx`
+synchronously inside an async tool body. The largest ATO/ACNC CSVs
+(`ACNC_AIS_FINANCIALS` ~36MB / 91 cols / 50k+ rows; `ACNC_REGISTER`
+~50MB) blocked the event loop for seconds, serialising every concurrent
+request behind a single parse and stalling downstream consumers like
+`ausdata-api` against its 20s gateway budget. Wrapped all three parse
+call-sites in `asyncio.to_thread` so the work runs on the default
+executor without blocking other in-flight tool calls. Matches the
+0.4.7 / 0.6.4 / 0.8.6 fixes in `aihw-mcp` / `asic-mcp` / `apra-mcp`.
+
 ## [0.8.5] - 2026-05-16
 
 ### Performance — extend the streaming-CSV path to `ACNC_REGISTER`
