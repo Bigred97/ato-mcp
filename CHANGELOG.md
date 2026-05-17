@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.7] - 2026-05-17
+
+### Improved — transport-agnostic error hints (no MCP-tool-name references)
+
+`ValueError` hints in `curated.py` and `shaping.py` previously said
+`Try describe_dataset({id!r}) to see all allowed values`. That MCP
+tool-name leaks into REST-gateway responses (where the user is hitting
+`/v1/describe/{id}`) and Python-library callers (who'd call the
+function directly). Rewrote the affected hints to read "Use the
+describe endpoint or describe tool to see all allowed values for X" —
+same intent, no transport-specific noise. Mirrors the rba-mcp 0.7.5
+guard. Added a portfolio-style regression in `test_server_validation.py`
+that AST-walks `curated.py` / `shaping.py` and asserts no string
+literal contains an MCP tool reference (`describe_dataset(`,
+`search_datasets(`, `list_curated(`, `get_data(`, `latest(`).
+No runtime behaviour change beyond the wording.
+
 ## [0.8.6] - 2026-05-17
 
 ### Fixed — event-loop blocking on sync CSV/XLSX parse

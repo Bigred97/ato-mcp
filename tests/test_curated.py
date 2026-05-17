@@ -135,21 +135,22 @@ def test_unknown_measure_suggests_close_match():
         curated.resolve_measure_keys(cd, "tax_payible")  # typo: payible -> payable
     msg = str(exc_info.value)
     assert "Did you mean 'tax_payable'" in msg
-    # And points back to describe_dataset for full details
-    assert "describe_dataset" in msg
+    # And points back to a describe action (transport-agnostic phrasing)
+    assert "describe endpoint or describe tool" in msg
 
 
 def test_unknown_filter_value_suggests_close_match():
     """Quality dim #5: an unknown filter value (e.g. 'nws' for 'nsw') should
-    point to the closest valid alias and reference describe_dataset() for the
-    full list, not just describe the rejection."""
+    point to the closest valid alias and reference the describe surface (in
+    transport-agnostic phrasing) for the full list, not just describe the
+    rejection."""
     cd = curated.get("IND_POSTCODE_MEDIAN")
     assert cd is not None
     with pytest.raises(ValueError) as exc_info:
         curated.translate_filter_value(cd, "state", "nws")  # typo: nws -> nsw
     msg = str(exc_info.value)
     assert "Did you mean 'nsw'" in msg
-    assert "describe_dataset" in msg
+    assert "describe endpoint or describe tool" in msg
 
 
 # ---- aus-identity cross-source normalisation on state filter ----

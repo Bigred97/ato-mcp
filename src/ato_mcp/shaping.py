@@ -175,7 +175,7 @@ def _apply_filters(
                 f"Unknown filter {user_key!r} for dataset {cd.id!r}. "
                 f"{hint}"
                 f"Valid options: {', '.join(valid[:10])}{more}. "
-                f"Try describe_dataset({cd.id!r}) for full dimension details."
+                f"Use the describe endpoint or describe tool for full dimension details on {cd.id!r}."
             )
         # Lists mean "OR" across values.
         if isinstance(user_val, list):

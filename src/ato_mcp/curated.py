@@ -322,7 +322,7 @@ def translate_filter_value(
         f"Unknown value {user_value!r} for filter {dim_key!r} on dataset {cd.id!r}. "
         f"{hint}"
         f"Valid options: {', '.join(valid[:10])}{more}. "
-        f"Try describe_dataset({cd.id!r}) to see all allowed values."
+        f"Use the describe endpoint or describe tool to see all allowed values for {cd.id!r}."
     )
 
 
@@ -371,7 +371,7 @@ def resolve_measure_keys(
             raise ValueError(
                 "measures filter is an empty list. "
                 "Pass at least one measure, or omit `measures` to return all. "
-                f"Try describe_dataset({cd.id!r}) to see available measures."
+                f"Use the describe endpoint or describe tool to see available measures for {cd.id!r}."
             )
         items = [str(x) for x in requested]
     else:
@@ -381,7 +381,7 @@ def resolve_measure_keys(
         )
         raise ValueError(
             f"measures must be a string or list of strings, got {type(requested).__name__}. "
-            f"Try describe_dataset({cd.id!r}) to discover valid measure keys. "
+            f"Use the describe endpoint or describe tool to discover valid measure keys for {cd.id!r}. "
             f"Example: {example}."
         )
 
@@ -396,7 +396,7 @@ def resolve_measure_keys(
             raise ValueError(
                 f"Empty measure key. "
                 f"Valid options: {', '.join(valid_sorted[:10])}{more}. "
-                f"Try describe_dataset({cd.id!r}) for full measure details."
+                f"Use the describe endpoint or describe tool for full measure details on {cd.id!r}."
             )
         if v_str in valid_keys:
             out.append(v_str)
@@ -416,7 +416,7 @@ def resolve_measure_keys(
                 f"Unknown measure {v!r} for dataset {cd.id!r}. "
                 f"{hint}"
                 f"Valid options: {valid_hint}{more}. "
-                f"Try describe_dataset({cd.id!r}) for full measure details."
+                f"Use the describe endpoint or describe tool for full measure details on {cd.id!r}."
             )
     # Dedupe while preserving order.
     seen: set[str] = set()
