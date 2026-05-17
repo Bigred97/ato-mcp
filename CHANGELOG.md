@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.14] - 2026-05-18
+
+### Fixed — latest() now caps register-shaped datasets
+
+Customer-sim flag: `latest('ACNC_REGISTER')` returned all 65,566 charities
+(~40 MB JSON, ~10M tokens) — blowing agent context windows. The
+documented contract ("latest() caps register dumps via limit +
+truncated_at") wasn't enforced for ATO's wide-layout register datasets.
+
+Added `limit` parameter to `latest()` (default 50, max 10,000) — matches
+asic-mcp's pattern. Truncated responses set `truncated_at` to the
+original row count so callers can detect + surface the truncation.
+
+For time-series datasets (GST_MONTHLY etc.) `last_n=1` continues to trim
+to the latest period; the new `limit` cap is a no-op there.
+
+Examples:
+- `latest('ACNC_REGISTER')` → 50 rows, truncated_at=65,566 (was 65k rows / 40 MB)
+- `latest('ACNC_REGISTER', filters={'state': 'nsw'})` → 50 NSW charities,
+  truncated_at=20,225
+- `latest('ACNC_REGISTER', limit=500)` → 500 rows, truncated_at=65,566
+
+326 unit tests pass.
+
 ## [0.8.13] - 2026-05-18
 
 ### Improved — high-confidence "Did you mean?" on free-form dimensions

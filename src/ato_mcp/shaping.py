@@ -553,6 +553,7 @@ def build_response(
     fmt: str,
     user_query: dict[str, Any],
     last_n: int | None = None,
+    limit: int | None = None,
 ) -> DataResponse:
     """The single entrypoint shaping uses to build a DataResponse from a parsed df.
 
@@ -645,8 +646,17 @@ def build_response(
     # extract a specific section from a multi-section sheet); the cap
     # here is a different concept and gets its own constant.
     truncated_at: int | None = None
-    if len(records) > _HARD_MAX_RECORDS:
-        truncated_at = len(records)
+    original_count = len(records)
+    # Apply caller-supplied `limit` FIRST (e.g. latest() uses limit=50
+    # to keep register dumps under the agent context window). This is
+    # the customer-facing soft cap. The hard ceiling below catches the
+    # case where the customer didn't pass `limit` and the dataset is
+    # pathologically large.
+    if limit is not None and limit > 0 and original_count > limit:
+        truncated_at = original_count
+        records = records[:limit]
+    elif original_count > _HARD_MAX_RECORDS:
+        truncated_at = original_count
         records = records[:_HARD_MAX_RECORDS]
 
     if fmt == "csv":
