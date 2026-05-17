@@ -58,26 +58,39 @@ def search(query: str, limit: int = 10) -> list[DatasetSummary]:
     if not summaries:
         return []
 
-    # Description contribution caps at 30 — well below a clean
-    # high-signal token-set match (100). Tuned to keep curated
-    # keyword/name matches reliably above any description-only hit.
+    # Three-pool ranker (matches apra/aihw/asic/rba design):
+    # - id+name token_set_ratio = PRIMARY discriminator
+    # - keywords broaden recall at KEYWORD_WEIGHT (under name strength)
+    # - description capped at DESCRIPTION_CAP, half weight
+    # - PHRASE_BONUS when query is contiguous substring of keyword
+    #   haystack
+    # - proportional scaling against leader's raw — no pre-sort clamp
     DESCRIPTION_CAP = 30
+    KEYWORD_WEIGHT = 0.4
+    PHRASE_BONUS = 15
 
     keyword_lookup = {cd.id: " ".join(cd.search_keywords) for cd in curated_mod.list_all()}
-
-    scored: list[tuple[float, float, int]] = []  # (final, high, idx)
     query_lc = query.lower()
+    candidates: list[tuple[float, float, int]] = []
     for i, s in enumerate(summaries):
-        high_str = f"{s.id} {s.name} {keyword_lookup.get(s.id, '')}".lower()
+        name_str = f"{s.id} {s.name}".lower()
+        kw_str = f"{name_str} {keyword_lookup.get(s.id, '')}".lower()
         desc_str = (s.description or "").lower()
-        high = fuzz.token_set_ratio(query_lc, high_str)
+        name_high = fuzz.token_set_ratio(query_lc, name_str)
+        kw_high = fuzz.token_set_ratio(query_lc, kw_str)
         desc_raw = fuzz.WRatio(query_lc, desc_str) if desc_str else 0
         desc = min(desc_raw, DESCRIPTION_CAP)
-        final = min(high + desc * 0.5, 100.0)  # half-weight desc on top of full-weight high
-        scored.append((final, high, i))
+        phrase = PHRASE_BONUS if query_lc and query_lc in kw_str else 0
+        raw_adjusted = name_high + kw_high * KEYWORD_WEIGHT + desc * 0.3 + phrase
+        candidates.append((raw_adjusted, name_high, i))
 
-    scored.sort(key=lambda t: (-t[0], -t[1]))
-    return [
-        summaries[idx].model_copy(update={"relevance": round(float(final), 1)})
-        for final, _high, idx in scored[:limit]
-    ]
+    candidates.sort(key=lambda t: (-t[0], -t[1]))
+    top_pool = candidates[:limit]
+    out: list[DatasetSummary] = []
+    if top_pool:
+        leader_adj = top_pool[0][0]
+        scale_ref = max(leader_adj, 100.0)
+        for raw, _name_high, idx in top_pool:
+            rel = round(max(0.0, (raw / scale_ref) * 100.0), 1)
+            out.append(summaries[idx].model_copy(update={"relevance": rel}))
+    return out

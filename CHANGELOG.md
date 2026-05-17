@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.12] - 2026-05-18
+
+### Fixed — three-pool ranker matches portfolio standard
+
+Two-pool ranker shipped in 0.8.10/0.8.11 had clamp-to-100 saturation:
+broad customer queries (e.g. 'income by postcode') tied multiple
+datasets at rel=100 because the final `min(..., 100.0)` collapsed
+their distinct raw scores.
+
+Switched to three-pool design (portfolio-consistent with apra 0.8.13 /
+aihw 0.4.12 / asic 0.6.8 / rba 0.8.3):
+
+- `id+name` token_set_ratio = PRIMARY discriminator
+- keywords broaden recall at KEYWORD_WEIGHT=0.4
+- description capped at 30, weight 0.3
+- PHRASE_BONUS=15 when query is contiguous substring of keyword haystack
+- proportional scaling against leader's raw — no pre-sort clamp
+
+Verification (post-fix, single-leader queries that previously tied):
+- 'charity revenue' → ACNC_AIS_FINANCIALS at 100, ACNC_REGISTER at 50.7
+- 'income by postcode' → IND_POSTCODE_MEDIAN at 100, IND_POSTCODE at 85.3
+- 'gst collections' → GST_MONTHLY at 100
+- 'tax gap' → TAX_GAPS at 100
+- 'foreign owned residential' → FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY at 100
+
+326 unit tests pass.
+
 ## [0.8.11] - 2026-05-18
 
 ### Docs — SMSF_FUNDS record granularity now explicit
