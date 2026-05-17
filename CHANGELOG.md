@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.8] - 2026-05-18
+
+### Performance — Parquet on-disk parsed-DataFrame cache
+
+Customer-sim agent re-confirmed cold-call timeouts on
+`ACNC_AIS_FINANCIALS` and `HELP_DEBT` on the live gateway even after
+0.8.6's `asyncio.to_thread` wrap. The in-memory LRU only helps warm
+calls — on Fly's daily rebuild / worker bounce the first request paid
+the full 4-9s pandas parse, which combined with network fetch + JSON
+serialisation tripped the gateway's 20s budget.
+
+Added a Parquet on-disk fallback (mirror of wgea 0.6.4 / aihw 0.4.9):
+
+- After parse, DataFrame is persisted to
+  `~/.ato-mcp/parquet-cache/{sha256-of-key}.parquet` (overridable via
+  `ATO_MCP_PARQUET_CACHE_DIR`).
+- Before parsing, check the file: read with `pd.read_parquet` in
+  ~0.5-1s on warm cache, much cheaper than the cold pandas re-parse.
+- TTL: 24h, matching ATO/ACNC's publish cadence.
+- Self-heal: corrupted Parquet unlinked, falls through to fresh parse.
+- Atomic write via `.tmp` + rename.
+
+### Performance — `ACNC_AIS_FINANCIALS` hard-capped at 100k rows
+
+The full file is ~853k rows × ~30 columns. Even after the parse
+completes, Pydantic + JSON serialisation of 853k records on the
+gateway path was exceeding the 20s budget. Added `max_rows: 100000`
+to the curated YAML so the streaming reader caps row count at parse
+time. Customers needing the full set should filter via the `filters`
+parameter (e.g. `{"state": "NSW"}` narrows to ~300k) or pull the CSV
+from data.gov.au directly.
+
+### Internal
+
+- Added `pyarrow>=15` dep.
+- New `parquet_cache.py` module.
+- `reset_df_cache_for_tests()` now clears both LRU + Parquet.
+- Conftest fixture isolates `ATO_MCP_PARQUET_CACHE_DIR` per session.
+- 326 tests pass.
+
 ## [0.8.7] - 2026-05-17
 
 ### Improved — transport-agnostic error hints (no MCP-tool-name references)

@@ -17,6 +17,14 @@ format: csv
 header_row: 1
 layout: wide
 cache_kind: register
+# Hard cap to keep cold-call serialisation + transport under the
+# ausdata-api 20s gateway budget. 853k rows × ~30 cols serialised to
+# JSON exceeded the timeout even when the parse itself completed.
+# 100k rows is enough for the top-N / aggregate-by-category queries
+# customers actually run; callers needing the full set should filter
+# server-side via the `filters` parameter or pull the CSV from
+# data.gov.au directly.
+max_rows: 100000
 search_keywords:
   - charity financials
   - charity revenue

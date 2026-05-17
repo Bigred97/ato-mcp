@@ -24,6 +24,19 @@ def reset_curated_registry():
     curated.reset_registry()
 
 
+@pytest.fixture(autouse=True)
+def isolate_parquet_cache_dir(tmp_path_factory, monkeypatch):
+    """Redirect the Parquet on-disk cache to a per-session tmp dir.
+
+    Without this, tests would write to `~/.ato-mcp/parquet-cache/`
+    (the real user dir) and cache hits could leak between test runs
+    and across developer machines.
+    """
+    target = tmp_path_factory.mktemp("ato_parquet_cache")
+    monkeypatch.setenv("ATO_MCP_PARQUET_CACHE_DIR", str(target))
+    yield
+
+
 @pytest.fixture
 def fixture_dir() -> Path:
     return FIXTURE_DIR
