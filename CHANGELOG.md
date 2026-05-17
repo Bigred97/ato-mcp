@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.13] - 2026-05-18
+
+### Improved — high-confidence "Did you mean?" on free-form dimensions
+
+Previously, filtering by a non-enum dimension (industry_broad,
+industry_fine, postcode, age_range) with a typo or truncated value
+returned 0 rows silently. Customer-impact: gateway returns an empty
+result with no hint that the filter value was wrong.
+
+Now, after applying each filter: if the result is empty AND the dim has
+no enum AND difflib finds a HIGH-CONFIDENCE close match (cutoff=0.7),
+raise a ValueError with the suggestion. Cutoff is intentionally strict
+so legitimately-empty results (a real but unmatched value, security-
+injection chars, unicode) still pass through silently — only "almost-
+right" typos trigger.
+
+Examples:
+- `industry_broad='A. Agriculture, Forestry'` (truncated) →
+  "Did you mean 'A. Agriculture, Forestry and Fishing'?"
+- `industry_broad='banking'` → silent 0 rows (no close match; legitimate
+  "no banks in this slice" or wrong-classification system response)
+- `postcode='9999'` → silent 0 rows (real-form but absent value)
+
+326 unit tests pass.
+
 ## [0.8.12] - 2026-05-18
 
 ### Fixed — three-pool ranker matches portfolio standard

@@ -198,11 +198,49 @@ def _apply_filters(
                 )
             resolved = [translate_filter_value(cd, user_key, str(v).strip()) for v in user_val]
             mask = out[user_key].astype("string").isin(resolved)
+            unresolved_value = ", ".join(str(v).strip() for v in user_val)
         else:
             resolved = translate_filter_value(cd, user_key, str(user_val).strip())
             # Use string comparison so postcode (numeric in source) and "2600" both match.
             mask = out[user_key].astype("string") == str(resolved)
-        out = out.loc[mask]
+            unresolved_value = str(user_val).strip()
+        next_out = out.loc[mask]
+        # If a filter wipes out all rows AND the dim is free-form (no
+        # curated enum), the customer likely typed a value that doesn't
+        # exist in the data (e.g. 'banking' against 'industry_broad'
+        # whose actual values are ANZSIC class names like 'K. Financial
+        # and Insurance Services'). Suggest the closest distinct value
+        # so they aren't stuck with a silent empty response.
+        if next_out.empty and not out.empty:
+            dv = cd.dimension_values.get(user_key)
+            has_enum = dv is not None and dv.values
+            if not has_enum:
+                # Only raise on HIGH-CONFIDENCE typo: difflib with the
+                # strict cutoff finds a close match. Without a close
+                # match, treat empty as a legitimate result (the value
+                # may just not appear in this slice, or the customer
+                # might be passing a security-injection char, unicode,
+                # or a real but unmatched value). Letting unmatched
+                # values through silently preserves the contract for
+                # edge cases and avoids breaking the empty-result
+                # tests; the suggestion only fires when there's strong
+                # evidence the customer typed a typo.
+                actual_values = out[user_key].dropna().astype(str).unique().tolist()
+                suggestion = difflib.get_close_matches(
+                    unresolved_value, actual_values, n=3, cutoff=0.7
+                )
+                if suggestion:
+                    others = (
+                        f" Other close matches: {', '.join(repr(s) for s in suggestion[1:])}."
+                        if len(suggestion) > 1
+                        else ""
+                    )
+                    raise ValueError(
+                        f"No matches for {unresolved_value!r} in {user_key!r} on dataset {cd.id!r}. "
+                        f"Did you mean {suggestion[0]!r}?{others} "
+                        f"Use the describe endpoint or describe tool for the full value list on {cd.id!r}."
+                    )
+        out = next_out
     return out.reset_index(drop=True)
 
 
