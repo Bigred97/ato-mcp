@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.11] - 2026-05-18
+
+### Docs — SMSF_FUNDS record granularity now explicit
+
+Customer-sim flagged ambiguous semantics: `limit=1` on SMSF_FUNDS
+returns one (year, measure) record, not "the latest snapshot across
+all 5 measures". Added an explicit `**Record granularity**` note to
+the YAML description so `describe_dataset('SMSF_FUNDS')` makes the
+shape obvious. Customers wanting a full latest-year snapshot should
+pass `last_n=1` without `measures` filter — returns one record per
+measure for the latest year.
+
+No data shape change.
+
 ## [0.8.10] - 2026-05-18
 
 ### Fixed — three customer-sim issues

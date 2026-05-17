@@ -8,6 +8,14 @@ description: |
   funds holding ~$997B in assets (2023-24), grown from ~566,871 funds /
   $711B in 2019-20.
   Source: ATO Self Managed Super Funds dataset on data.gov.au.
+
+  **Record granularity**: each record is one (year, measure) pair.
+  `limit=1` returns one observation (the most recent year of one
+  measure), not "the latest snapshot across all measures". For the
+  full latest-year snapshot pass `last_n=1` without a `measures`
+  filter — that returns N records (one per measure for the latest
+  year). Set `measures=['total_smsfs']` to narrow to a single metric
+  over time.
 period_coverage: 2019-20 to 2024-25
 update_frequency: annual
 source_url: https://data.gov.au/data/dataset/self-managed-superannuation-funds
