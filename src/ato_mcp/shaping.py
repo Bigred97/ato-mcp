@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import difflib
 import math
+import re
 from datetime import UTC, datetime
 from typing import Any
 
@@ -30,6 +31,15 @@ from .curated import (
     translate_filter_value,
 )
 from .models import DataResponse, Observation
+
+
+# Portfolio-wide hard ceiling on response record count. Wide-layout
+# datasets like ACNC_AIS_FINANCIALS can produce 853k records (53k
+# charities × 16 measures), which overflows the ausdata-api 20s
+# gateway budget on Pydantic + JSON serialisation. 100k is well above
+# the largest legitimate slice customers query; anything bigger should
+# use the source CSV directly.
+_HARD_MAX_RECORDS = 100_000
 
 
 def _safe_value(v: Any) -> float | None:
@@ -196,6 +206,27 @@ def _apply_filters(
     return out.reset_index(drop=True)
 
 
+_WIDE_PERIOD_FY_SUFFIX_RE = re.compile(r"_(\d{4})_(\d{2})$")
+
+
+def _period_from_measure_key(mk: str) -> str | None:
+    """Extract a YYYY-YY financial-year period from a wide-layout measure key.
+
+    Several ATO wide-layout datasets bake the financial-year into the
+    column name (and therefore the curated measure key), e.g.
+    `median_taxable_income_2024_25` → FY '2024-25'. Pulling that into
+    `Observation.period` makes `start_period`/`end_period` filters
+    actually work — before this, wide-layout records always had
+    `period=None` and period filters were silently ignored.
+
+    Returns the canonical 'YYYY-YY' form, or None when no suffix found.
+    """
+    m = _WIDE_PERIOD_FY_SUFFIX_RE.search(mk)
+    if not m:
+        return None
+    return f"{m.group(1)}-{m.group(2)}"
+
+
 def shape_wide(
     df: pd.DataFrame,
     cd: CuratedDataset,
@@ -206,6 +237,12 @@ def shape_wide(
     Each row carries every dimension (renamed to its alias) on the
     observation. Multiple measures requested means multiple observations
     per source row — one per measure.
+
+    Period extraction: when a measure key ends in `_YYYY_YY` (ATO
+    financial-year suffix — e.g. `median_taxable_income_2024_25`), the
+    period is set to 'YYYY-YY'. This lets start_period/end_period
+    filters work on wide-layout datasets that encode time in column
+    names (IND_POSTCODE_MEDIAN, IND_POSTCODE, etc.).
     """
     if df.empty:
         return []
@@ -213,6 +250,10 @@ def shape_wide(
     ids = [c.key for c in id_columns(cd)]
     dim_keys = dims + ids
     measure_by_key = {c.key: c for c in measure_columns(cd)}
+    # Precompute the period per measure key — _WIDE_PERIOD_FY_SUFFIX_RE
+    # is microsecond-fast but doing it once per measure beats once per
+    # row × measure on a 50k-row CSV.
+    measure_period = {mk: _period_from_measure_key(mk) for mk in measures}
 
     records: list[Observation] = []
     for _, row in df.iterrows():
@@ -232,7 +273,7 @@ def shape_wide(
                 continue
             records.append(
                 Observation(
-                    period=None,
+                    period=measure_period[mk],
                     value=value,
                     measure=mk,
                     dimensions=dim_vals,
@@ -495,27 +536,44 @@ def build_response(
 
     if cd.layout == "wide":
         records = shape_wide(filtered, cd, measure_keys)
+        # Apply start/end period filter on wide-layout records — the
+        # transposed layout filters period columns before shape (period
+        # is column header there); the wide layout extracts period from
+        # the measure-key suffix during shape and filters AFTER.
+        if (start_period or end_period) and records:
+            records = [
+                r for r in records
+                if r.period is None or _period_in_range(r.period, start_period, end_period)
+            ]
     else:
         records = shape_transposed(filtered, cd, measure_keys, start_period, end_period)
 
     if last_n is not None and last_n > 0 and records:
         # last_n per measure — keep the MOST RECENT N observations per measure.
         # Sort by normalised period ascending first, so `tail` always selects
-        # the freshest values regardless of source-file row order (the SMSF
-        # overview lists years descending; the GST monthly table lists them
-        # ascending — both need to land on "newest" when last_n=1).
+        # the freshest values regardless of source-file row order.
         #
-        # SKIP the trim entirely if every record has a null period — that's
-        # the wide-layout case (single-year tables like IND_POSTCODE_MEDIAN).
-        # Trimming there would arbitrarily pick one row per measure based on
-        # iteration order, which is never what the caller wants. `latest()`
-        # on a wide dataset == get_data() (same filter, same shape).
-        if all(r.period is None for r in records):
-            pass  # no trim
+        # SKIP cases where the trim would arbitrarily slice rows:
+        #   1. All records have null period (wide layout pre-period-extraction,
+        #      now rare).
+        #   2. Each measure has only ONE distinct period (wide-layout with
+        #      time encoded in measure key — IND_POSTCODE_MEDIAN's
+        #      `median_taxable_income_2022_23` measure already IS one
+        #      period; latest=1 over it across postcodes would arbitrarily
+        #      pick 1 of N postcodes which is never what `latest()` means).
+        # latest() in those cases behaves like get_data().
+        per_measure: dict[str, list[Observation]] = {}
+        for r in records:
+            per_measure.setdefault(r.measure or "", []).append(r)
+
+        all_null = all(r.period is None for r in records)
+        single_period_per_measure = all(
+            len({r.period for r in group if r.period is not None}) <= 1
+            for group in per_measure.values()
+        )
+        if all_null or single_period_per_measure:
+            pass  # no trim — latest behaves like get_data on wide layouts
         else:
-            per_measure: dict[str, list[Observation]] = {}
-            for r in records:
-                per_measure.setdefault(r.measure or "", []).append(r)
             records = []
             for k, group in per_measure.items():
                 group_sorted = sorted(
@@ -537,6 +595,21 @@ def build_response(
         if periods:
             period_start = period_start or periods[0]
             period_end = period_end or periods[-1]
+
+    # Apply portfolio-wide hard ceiling on response record count.
+    # Wide-layout datasets (ACNC_AIS_FINANCIALS) can explode to 853k
+    # records (53k charities × 16 measures), and Pydantic + JSON
+    # serialisation of that overflows the ausdata-api 20s gateway
+    # budget. Cap at 100k — well above the largest legitimate query
+    # (full-population scans should use the source CSV directly).
+    # `cd.max_rows` is NOT used here because for some datasets it
+    # carves a sub-table during parsing (SMSF_FUNDS has max_rows: 3 to
+    # extract a specific section from a multi-section sheet); the cap
+    # here is a different concept and gets its own constant.
+    truncated_at: int | None = None
+    if len(records) > _HARD_MAX_RECORDS:
+        truncated_at = len(records)
+        records = records[:_HARD_MAX_RECORDS]
 
     if fmt == "csv":
         out_records: list[Observation] | list[dict[str, Any]] = []
@@ -560,4 +633,5 @@ def build_response(
         retrieved_at=datetime.now(UTC),
         source_url=cd.source_url,
         ato_url=cd.source_url,
+        truncated_at=truncated_at,
     )

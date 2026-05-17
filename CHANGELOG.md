@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.10] - 2026-05-18
+
+### Fixed — three customer-sim issues
+
+**1. `ACNC_AIS_FINANCIALS` capped at 100k records (was 853k).**
+The YAML's `max_rows: 100000` capped INPUT charity rows during streaming
+parse, but the wide-layout pipeline then exploded 53k charities × 16
+measures into 853k records, overflowing the ausdata-api 20s gateway
+budget on Pydantic + JSON serialisation. Added a portfolio-wide
+`_HARD_MAX_RECORDS = 100_000` ceiling in `build_response` — records
+exceeding the cap get truncated and `truncated_at` is set to the
+original count. Customers needing the full dataset should filter
+server-side or pull the source CSV directly.
+
+**2. `IND_POSTCODE_MEDIAN` now respects `start_period` / `end_period`.**
+Wide-layout records were emitted with `period=None` because the period
+is encoded in the measure key (`median_taxable_income_2022_23`). The
+filter never had a period field to compare against, so every query
+returned the full 2003-04 to 2022-23 history. `shape_wide` now extracts
+the `_YYYY_YY` suffix from each measure key and populates
+`Observation.period`. `build_response` then applies the start/end
+period filter on wide-layout records (mirroring how transposed-layout
+already worked).
+
+**3. Two-pool search ranker.**
+The previous WRatio-only ranker collapsed every ato dataset to ~57
+relevance for any query (e.g. "median income by postcode" returned 12
+datasets tied at 57). Replaced with a token_set_ratio over the
+id+name+keywords pool plus a capped WRatio over the description pool.
+Live verified:
+- "median income by postcode" → IND_POSTCODE_MEDIAN rel=100 (top)
+- "charity revenue by ANZSIC" → ACNC_AIS_FINANCIALS rel=90 (top)
+- "foreign ownership china" → FOREIGN_OWNERSHIP_* rel=100 (top)
+- "cash rate history" → top ato result drops to 53 (sister correctly
+  no longer dominates a non-ato query)
+
+### Internal
+
+- `_HARD_MAX_RECORDS = 100_000` constant in `shaping.py`.
+- `_WIDE_PERIOD_FY_SUFFIX_RE` regex + `_period_from_measure_key()`
+  helper extract `YYYY-YY` from measure keys.
+- `last_n` trim now skips when each measure has only one distinct
+  period (e.g. wide-layout single-FY measures) — preserves
+  pre-fix behaviour for `latest()` on wide datasets.
+- 326 tests pass.
+
 ## [0.8.9] - 2026-05-18
 
 ### Added — `DatasetSummary.relevance` populated by `search_datasets()`

@@ -33,8 +33,21 @@ def list_summaries() -> list[DatasetSummary]:
 def search(query: str, limit: int = 10) -> list[DatasetSummary]:
     """Fuzzy-search curated datasets by id, name, description, and search_keywords.
 
-    Score order is by RapidFuzz WRatio. The whole index is curated so no
-    bonus reranking is needed (the rba/abs `+25 curated bonus` is irrelevant here).
+    Two-pool ranker (mirrors abs-mcp's design):
+      * High-signal pool = id + name + curated.search_keywords —
+        scored with token_set_ratio. Token-strict so a query like
+        'charity revenue' doesn't fuzzy-match 'foreign ownership' just
+        because both descriptions mention 'Australia' or 'annual'.
+      * Description pool = the YAML description text — scored with
+        WRatio (preserves typo tolerance for free-text queries) and
+        capped at DESCRIPTION_CAP so long boilerplate prose can't
+        dominate.
+
+    Final score = token_set(name/keywords) + min(WRatio(description),
+    DESCRIPTION_CAP), clamped to 100. The previous WRatio-only ranker
+    collapsed unrelated datasets to identical ~57 scores because their
+    descriptions all contained common terms like 'Australia', 'data',
+    'annual'; token_set_ratio fixes that by requiring real word overlap.
     """
     if not query.strip():
         raise ValueError(
@@ -44,20 +57,27 @@ def search(query: str, limit: int = 10) -> list[DatasetSummary]:
     summaries = list_summaries()
     if not summaries:
         return []
-    # Build the haystack including search_keywords from the curated YAML.
+
+    # Description contribution caps at 30 — well below a clean
+    # high-signal token-set match (100). Tuned to keep curated
+    # keyword/name matches reliably above any description-only hit.
+    DESCRIPTION_CAP = 30
+
     keyword_lookup = {cd.id: " ".join(cd.search_keywords) for cd in curated_mod.list_all()}
-    haystack = {
-        i: f"{s.id} {s.name} {s.description or ''} {keyword_lookup.get(s.id, '')}"
-        for i, s in enumerate(summaries)
-    }
-    matches = process.extract(
-        query, haystack, scorer=fuzz.WRatio, limit=max(limit, len(summaries))
-    )
-    ordered = sorted(matches, key=lambda m: -m[1])
-    # Attach the WRatio score to each summary so direct-MCP callers can
-    # order their UI without re-running the fuzzy match. Gateway already
-    # re-ranks; this is for non-gateway consumers.
+
+    scored: list[tuple[float, float, int]] = []  # (final, high, idx)
+    query_lc = query.lower()
+    for i, s in enumerate(summaries):
+        high_str = f"{s.id} {s.name} {keyword_lookup.get(s.id, '')}".lower()
+        desc_str = (s.description or "").lower()
+        high = fuzz.token_set_ratio(query_lc, high_str)
+        desc_raw = fuzz.WRatio(query_lc, desc_str) if desc_str else 0
+        desc = min(desc_raw, DESCRIPTION_CAP)
+        final = min(high + desc * 0.5, 100.0)  # half-weight desc on top of full-weight high
+        scored.append((final, high, i))
+
+    scored.sort(key=lambda t: (-t[0], -t[1]))
     return [
-        summaries[idx].model_copy(update={"relevance": round(float(score), 1)})
-        for _hay, score, idx in ordered[:limit]
+        summaries[idx].model_copy(update={"relevance": round(float(final), 1)})
+        for final, _high, idx in scored[:limit]
     ]
