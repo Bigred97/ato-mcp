@@ -30,6 +30,11 @@ class DatasetSummary(BaseModel):
     description: str | None = None
     update_frequency: str | None = None      # "annual" / "weekly" / "irregular"
     is_curated: bool = False
+    # 0-100 RapidFuzz WRatio score against the search query. None when the
+    # entry came from list_curated() / list_all() rather than search().
+    # The ausdata-api gateway re-ranks across sources but direct-MCP
+    # callers (Claude Code etc.) read this to order their UI.
+    relevance: float | None = None
 
 
 class ColumnDetail(BaseModel):

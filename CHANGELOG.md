@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.9] - 2026-05-18
+
+### Added — `DatasetSummary.relevance` populated by `search_datasets()`
+
+`search_datasets()` results now carry their RapidFuzz WRatio score
+on the `relevance` field (0-100, rounded to 1dp). Previously the
+score was computed internally for sort order but discarded before
+returning, so direct-MCP callers (Claude Code etc.) had to re-rank
+their UI themselves. The ausdata-api gateway already re-ranks across
+sources; this change is for non-gateway consumers.
+
+`relevance: None` when the entry came from `list_curated()`.
+
 ## [0.8.8] - 2026-05-18
 
 ### Performance — Parquet on-disk parsed-DataFrame cache
