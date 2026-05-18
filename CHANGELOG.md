@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.21] - 2026-05-18
+
+### Added — `prewarm_curated()` + `ato-mcp --warmup` CLI
+
+Ports abs-mcp 0.11.14's prewarm pattern to ato-mcp. Gateway integration
+asked for the equivalent on the other DataResponse sisters to close the
+remaining cold-cache surface.
+
+Python API:
+```python
+from ato_mcp import server as ato_srv
+results = await ato_srv.prewarm_curated(max_concurrency=2, log=print)
+```
+CLI:
+```
+ato-mcp --warmup
+ato-mcp --warmup --warmup-concurrency 1
+ato-mcp --warmup --warmup-only IND_POSTCODE,GST_MONTHLY
+```
+
+Per-dataset error catching, exits 0/1 by aggregate success. Same shape
+as abs-mcp prewarm so gateway init hooks call both with identical
+signatures.
+
+326 unit tests pass.
+
 ## [0.8.20] - 2026-05-18
 
 ### Added — CGT_BY_GAINS_RANGE (distributional capital-gains view)
