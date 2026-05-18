@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.24] — 2026-05-19
+
+### Fixed
+
+- **Per-thread `_client` cache** (P0 prod bug, observed on ausdata-api):
+  module-global `_client` bound to the FIRST event loop and tripped
+  `RuntimeError: Event loop is closed` when called from a multi-loop
+  host that wraps the MCP and runs `asyncio.run(_get_data_impl(...))`
+  in a worker thread per request. Cache moved to `threading.local()`
+  so each worker thread gets its own client bound to its own loop.
+  `reset_client_for_tests()` now only clears the calling thread.
+
 ## [0.8.23] - 2026-05-19
 
 ### Fixed — `truncated_at` now fires correctly with shape-time short-circuit

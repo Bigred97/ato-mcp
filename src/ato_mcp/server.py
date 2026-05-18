@@ -18,6 +18,7 @@ import asyncio
 import difflib
 import hashlib
 import re
+import threading
 from collections import OrderedDict
 from typing import Annotated, Any, Literal
 
@@ -51,8 +52,15 @@ _VALID_FORMATS = {"records", "series", "csv"}
 
 mcp = FastMCP("ato-mcp")
 
-_client: ATOClient | None = None
-_client_lock = asyncio.Lock()
+# Per-thread client cache. We deliberately avoid a module-global singleton:
+# gateways like ausdata-api invoke us from worker threads with fresh asyncio
+# loops per call (`asyncio.run()` in a ThreadPoolExecutor worker). A
+# module-global client (and an `asyncio.Lock()` alongside it) binds to the
+# FIRST loop that creates it; subsequent calls from other threads then trip
+# httpx's internal asyncio resources with `RuntimeError: Event loop is
+# closed`. A thread-local cache gives each worker its own client bound to
+# its own loop while preserving the connection-pool win per-thread.
+_thread_local = threading.local()
 
 # Parsed-DataFrame cache. The byte cache already short-circuits the network,
 # but pandas/openpyxl still re-parses bytes on every warm call — for the
@@ -88,22 +96,39 @@ def _suggest_dataset_id(bad: str) -> str:
 
 
 async def _get_client() -> ATOClient:
-    global _client
-    async with _client_lock:
-        if _client is None:
-            _client = ATOClient()
-        return _client
+    """Return the per-thread client, constructing it on first use.
+
+    Each worker thread gets its own ATOClient bound to its own event loop.
+    Required because gateways like ausdata-api invoke us from worker threads
+    with fresh asyncio loops per call (`asyncio.run()`); a module-global
+    client would bind to the first loop and fail on subsequent calls with
+    `RuntimeError: Event loop is closed`.
+    """
+    client = getattr(_thread_local, "client", None)
+    if client is None:
+        client = ATOClient()
+        _thread_local.client = client
+    return client
 
 
 async def reset_client_for_tests() -> None:
-    """Drop the cached client. Tests that span event loops must clear it."""
-    global _client
-    if _client is not None:
+    """Drop the current thread's cached client.
+
+    The server keeps one ATOClient per worker thread (see `_get_client`).
+    Tests that span multiple event loops on the same thread must clear it
+    between loops or httpx will trip on a closed loop. Resets ONLY the
+    current thread's client; other threads are untouched.
+    """
+    client = getattr(_thread_local, "client", None)
+    if client is not None:
         try:
-            await _client.aclose()
+            await client.aclose()
         except Exception:
             pass
-        _client = None
+        try:
+            del _thread_local.client
+        except AttributeError:
+            pass
 
 
 def _normalize_dataset_id(dataset_id: Any) -> str:
