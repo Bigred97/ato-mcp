@@ -51,7 +51,7 @@ jobs:
       - name: Publish to PyPI (Trusted Publishing)
         uses: pypa/gh-action-pypi-publish@release/v1
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
