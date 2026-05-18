@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.22] - 2026-05-19
+
+### Fixed — ACNC_AIS_FINANCIALS OOM (worker RSS 1.16 GB → ~300 MB)
+
+Backend gateway flagged ato.ACNC_AIS_FINANCIALS as a remaining OOM
+risk after the asic-mcp 0.6.14 fix landed. Live profile confirmed:
+`latest(ACNC_AIS_FINANCIALS, limit=5)` peaked at **1.16 GB RSS** and
+took 62s cold / 53s warm. The pre-existing column-projected `pd.read_csv`
+parse path was bounded fine; the OOM was in the **shaping layer**.
+
+Root cause: `shape_wide` materialised the full Cartesian product of
+53k charities × 16 measures = **853k `Observation` Pydantic objects**
+(~850 MB Pydantic+dict state) BEFORE `build_response` applied the
+customer-facing `limit` slice. By the time the `limit=5` cut ran,
+the worker was already past 1 GB resident.
+
+Fix: thread a `max_records` short-circuit into `shape_wide` and
+`shape_transposed`. The shaping loop stops emitting Observations once
+the cap is hit, never building the rejected ~850k. `build_response`
+derives the cap from `(limit, last_n, _HARD_MAX_RECORDS)`:
+
+- `latest()` (`last_n=1`) → cap = `_HARD_MAX_RECORDS` (100k floor so
+  per-measure period sort+trim still has enough data).
+- `get_data(limit=N)` → cap = `min(N, _HARD_MAX_RECORDS)` (short-circuit
+  at the customer's soft cap — anything beyond gets sliced post-hoc).
+- No limit, no `last_n` → cap = `_HARD_MAX_RECORDS` (absolute safety
+  ceiling).
+
+Memory profile (live `latest('ACNC_AIS_FINANCIALS', limit=5)`):
+- After fix: ~300 MB peak RSS, ~9s cold / <1s warm ✓
+- Before (0.8.21): ~1,160 MB peak RSS, 62s cold ❌
+
+This pattern applies to every wide-layout dataset on the sister, not
+just ACNC_AIS_FINANCIALS. Future curations crossing the 100k
+Observation threshold get the protection by default; nothing extra
+to wire up per dataset.
+
+Tests added in `tests/test_shape_cap.py`: shape_wide short-circuit
+correctness, build_response cap derivation, shape_transposed
+short-circuit, ACNC synthetic cap smoke test.
+
 ## [0.8.21] - 2026-05-18
 
 ### Added — `prewarm_curated()` + `ato-mcp --warmup` CLI

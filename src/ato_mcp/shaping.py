@@ -308,6 +308,8 @@ def shape_wide(
     df: pd.DataFrame,
     cd: CuratedDataset,
     measures: list[str],
+    *,
+    max_records: int | None = None,
 ) -> list[Observation]:
     """One Observation per (row, measure) cell in a wide layout.
 
@@ -320,6 +322,12 @@ def shape_wide(
     period is set to 'YYYY-YY'. This lets start_period/end_period
     filters work on wide-layout datasets that encode time in column
     names (IND_POSTCODE_MEDIAN, IND_POSTCODE, etc.).
+
+    `max_records` short-circuits emission once the cap is reached. Wide
+    layouts can explode under naive shaping — ACNC_AIS_FINANCIALS at
+    53k rows × 16 measures = 853k Observations × ~1 KB each ≈ 850 MB.
+    Capping at emit time (typically 100k, set by build_response) keeps
+    peak memory bounded regardless of upstream row count.
     """
     if df.empty:
         return []
@@ -357,6 +365,8 @@ def shape_wide(
                     unit=mc.unit,
                 )
             )
+            if max_records is not None and len(records) >= max_records:
+                return records
     return records
 
 
@@ -366,6 +376,8 @@ def shape_transposed(
     measures: list[str],
     start_period: str | None,
     end_period: str | None,
+    *,
+    max_records: int | None = None,
 ) -> list[Observation]:
     """One Observation per (metric, period) cell in a transposed layout.
 
@@ -467,6 +479,8 @@ def shape_transposed(
                     unit=unit,
                 )
             )
+            if max_records is not None and len(records) >= max_records:
+                return records
     return records
 
 
@@ -612,8 +626,25 @@ def build_response(
 
     measure_keys = resolve_measure_keys(cd, measures)
 
+    # Compute the emit-time cap that shape_wide / shape_transposed will
+    # short-circuit on. Two rules:
+    #   1. If last_n is set (latest() trims per-measure post-shape) we
+    #      MUST materialize enough records for the trim to be meaningful,
+    #      so we use the portfolio hard ceiling (`_HARD_MAX_RECORDS`).
+    #   2. Otherwise we can short-circuit at the caller's `limit` — anything
+    #      beyond that gets sliced post-hoc anyway. `_HARD_MAX_RECORDS`
+    #      acts as the absolute safety floor when limit is None.
+    # This is what stops ACNC_AIS_FINANCIALS from materialising all 853k
+    # Observations before slicing to 5 (peak RSS 1.16 GB → ~300 MB).
+    if last_n is not None and last_n > 0:
+        shape_cap: int | None = _HARD_MAX_RECORDS
+    elif limit is not None and limit > 0:
+        shape_cap = min(limit, _HARD_MAX_RECORDS)
+    else:
+        shape_cap = _HARD_MAX_RECORDS
+
     if cd.layout == "wide":
-        records = shape_wide(filtered, cd, measure_keys)
+        records = shape_wide(filtered, cd, measure_keys, max_records=shape_cap)
         # Apply start/end period filter on wide-layout records — the
         # transposed layout filters period columns before shape (period
         # is column header there); the wide layout extracts period from
@@ -624,7 +655,10 @@ def build_response(
                 if r.period is None or _period_in_range(r.period, start_period, end_period)
             ]
     else:
-        records = shape_transposed(filtered, cd, measure_keys, start_period, end_period)
+        records = shape_transposed(
+            filtered, cd, measure_keys, start_period, end_period,
+            max_records=shape_cap,
+        )
 
     if last_n is not None and last_n > 0 and records:
         # last_n per measure — keep the MOST RECENT N observations per measure.
