@@ -45,6 +45,13 @@ class CuratedColumn:
     unit: str | None = None                  # "AUD", "Persons", "Count", "Per cent"
     role: str = "measure"                    # "dimension" | "measure" | "id"
     dtype: str | None = None                 # optional pandas coercion: "int", "float", "string"
+    # Post-rename string replacements applied to every cell of this column.
+    # Keys are the literal substring to replace, values are the replacement.
+    # Use for normalising source-side quirks like ATO's "2024 - 25" → "2024-25"
+    # so cross-sister period strings stay consistent ('2024-25' matches WGEA's
+    # reporting_year, IND_POSTCODE_MEDIAN's '2022-23', etc.). Only applied when
+    # dtype is "string" (or unset and the source is text).
+    value_replacements: dict[str, str] | None = None
 
 
 @dataclass(frozen=True)
@@ -108,6 +115,14 @@ def _parse_column(key: str, raw: dict) -> CuratedColumn:
         raise ValueError(f"Column {key!r} must be a mapping, got {type(raw).__name__}")
     if "source_column" not in raw:
         raise ValueError(f"Column {key!r} missing required field 'source_column'")
+    vr = raw.get("value_replacements")
+    if vr is not None:
+        if not isinstance(vr, dict):
+            raise ValueError(
+                f"Column {key!r} value_replacements must be a mapping of "
+                f"substring -> replacement, got {type(vr).__name__}"
+            )
+        vr = {str(k): str(v) for k, v in vr.items()}
     return CuratedColumn(
         key=key,
         source_column=str(raw["source_column"]),
@@ -115,6 +130,7 @@ def _parse_column(key: str, raw: dict) -> CuratedColumn:
         unit=raw.get("unit"),
         role=str(raw.get("role", "measure")),
         dtype=raw.get("dtype"),
+        value_replacements=vr,
     )
 
 

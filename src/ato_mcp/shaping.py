@@ -108,6 +108,17 @@ def _coerce_dtypes(df: pd.DataFrame, cd: CuratedDataset) -> pd.DataFrame:
                 # Lenient — coercion failures fall through; the data ships
                 # in whatever dtype pandas inferred originally.
                 pass
+        # value_replacements run AFTER dtype coercion so the column is in
+        # its final form (string-ish). Used to normalise source-side
+        # quirks like ATO HELP_DEBT's "2024 - 25" → "2024-25" so periods
+        # are cross-sister-consistent.
+        if col.value_replacements and col.key in df.columns:
+            series = df[col.key]
+            if not pd.api.types.is_numeric_dtype(series):
+                series = series.astype("string")
+                for needle, replacement in col.value_replacements.items():
+                    series = series.str.replace(needle, replacement, regex=False)
+                df[col.key] = series
     return df
 
 

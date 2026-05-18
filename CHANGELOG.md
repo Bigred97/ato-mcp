@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.19] - 2026-05-18
+
+### Fixed — HELP_DEBT income_year canonical format ("2024-25", no spaces)
+
+Customer-sim flagged that `ato.HELP_DEBT` returned `income_year='2024 - 25'`
+(with spaces) while every other portfolio dataset uses `'2024-25'`
+(IND_POSTCODE_MEDIAN, WGEA reporting_year, etc.). The space-padded form
+broke gateway-side period extraction and was a "bad data" inconsistency.
+
+Added `value_replacements` field to `CuratedColumn` (generic
+substring-replacement applied after dtype coercion). HELP_DEBT's
+income_year YAML maps `" - " → "-"`, so records now arrive as
+`income_year='2024-25'` matching the portfolio convention.
+
+326 unit tests pass.
+
 ## [0.8.18] - 2026-05-18
 
 ### Improved — year-range hint instead of misleading fuzzy match

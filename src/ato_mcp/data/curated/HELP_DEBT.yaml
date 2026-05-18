@@ -36,9 +36,16 @@ discovery:
 columns:
   income_year:
     source_column: "Year"
-    description: Financial year (e.g. "2024 - 25"). One row per year.
+    description: |
+      Financial year in canonical ATO format "YYYY-YY" (e.g. "2024-25").
+      ATO's source spreadsheet writes "2024 - 25" with spaces around the
+      hyphen; we strip those spaces so the value matches the portfolio
+      convention (IND_POSTCODE_MEDIAN uses "2022-23", WGEA reporting_year
+      uses "2024-25").
     role: dimension
     dtype: string
+    value_replacements:
+      " - ": "-"
   total_debt_aud:
     source_column: "Total incurred debt ($)"
     description: Total HECS/HELP debt incurred by end of financial year.

@@ -44,7 +44,7 @@ def test_help_latest_year_total_debt_over_100b(help_debt_xlsx):
     cd = curated.get("HELP_DEBT")
     df = _parse(cd, help_debt_xlsx)
     resp = shaping.build_response(
-        cd=cd, df=df, filters={"income_year": "2024 - 25"},
+        cd=cd, df=df, filters={"income_year": "2024-25"},
         measures="total_debt_aud",
         start_period=None, end_period=None, fmt="records", user_query={},
     )
@@ -63,8 +63,8 @@ def test_help_debt_grows_year_over_year(help_debt_xlsx):
     )
     by_year = {r.dimensions["income_year"]: r.value for r in resp.records}
     # Latest > 2020-21 > 2015-16
-    assert by_year["2024 - 25"] > by_year["2020 - 21"]
-    assert by_year["2020 - 21"] > by_year["2015 - 16"]
+    assert by_year["2024-25"] > by_year["2020-21"]
+    assert by_year["2020-21"] > by_year["2015-16"]
 
 
 def test_help_canary_source_columns_match(help_debt_xlsx):
@@ -83,7 +83,7 @@ def test_help_repayments_sum_makes_sense(help_debt_xlsx):
     cd = curated.get("HELP_DEBT")
     df = _parse(cd, help_debt_xlsx)
     resp = shaping.build_response(
-        cd=cd, df=df, filters={"income_year": "2024 - 25"},
+        cd=cd, df=df, filters={"income_year": "2024-25"},
         measures=["total_debt_aud", "compulsory_repayments_aud", "voluntary_repayments_aud"],
         start_period=None, end_period=None, fmt="records", user_query={},
     )
