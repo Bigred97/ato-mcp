@@ -39,7 +39,6 @@ def test_shape_wide_short_circuits_at_max_records():
     assert cd.layout == "wide"
 
     measure_keys = [c.key for c in curated.measure_columns(cd)][:2]
-    dim_cols = [c.source_column for c in cd.columns.values() if c.role in ("dimension", "id")]
 
     rows = []
     for i in range(10):
