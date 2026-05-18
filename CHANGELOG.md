@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.20] - 2026-05-18
+
+### Added — CGT_BY_GAINS_RANGE (distributional capital-gains view)
+
+Customer-feedback queue: "Capital gains by asset type and income bracket"
+not curated. ATO publishes CGT in two tables — Table 1 (by asset type ×
+entity × year, transposed layout, complex to parse) and Table 2 (net
+capital gains by entity × taxable status × gain-amount bracket × year,
+clean wide layout).
+
+Added CGT_BY_GAINS_RANGE from Table 2. Distributional CGT view:
+  - Individuals taxable 2022-23 g. \$1M+ bracket: \$15.98B realized
+    (concentrated wealth signal in CGT $$)
+  - 7 brackets from \$1-\$9 up to \$1M+
+
+For per-asset-type breakdown (shares vs property vs unit trusts) see
+the CGT Table 1 — transposed-by-year layout requires parser work,
+deferred. For age × income × CGT see IND_AGE_INCOME (already curated
+in 0.8.17).
+
+326 unit tests pass.
+
 ## [0.8.19] - 2026-05-18
 
 ### Fixed — HELP_DEBT income_year canonical format ("2024-25", no spaces)

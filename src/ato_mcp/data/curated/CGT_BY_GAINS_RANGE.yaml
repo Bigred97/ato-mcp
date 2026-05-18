@@ -1,0 +1,101 @@
+id: CGT_BY_GAINS_RANGE
+name: Net Capital Gains by Entity × Tax Status × Gains Range (Tax Statistics)
+description: |
+  ATO Taxation Statistics CGT Table 2 — net capital gains distributional
+  view by entity (Individuals / Companies / Funds), taxable status, and
+  size-of-gain bracket ($1-$9, $10-$99, ..., $10M+), 2013-14 through
+  2022-23.
+
+  Answers the distributional CGT questions:
+  - "How many taxpayers realized capital gains in the $1M-$10M bracket?"
+  - "What share of CGT $$ went to gains over $100,000?"
+  - "Companies vs Individuals — who realizes the largest gains?"
+
+  For per-asset-type breakdown (shares vs property vs unit trusts) see
+  CGT Table 1 — not yet curated (transposed-by-year layout). For age ×
+  income-range × CGT see IND_AGE_INCOME (Table 3A).
+
+  Customer query examples:
+  - "Number of individuals with net capital gains > $1M in 2022-23"
+    → `get_data('CGT_BY_GAINS_RANGE', filters={entity: 'individuals',
+       taxable_status: 'taxable', gains_range: 'g_1m_10m',
+       income_year: '2022-23'}, measures='count')`
+  - "Total CGT $$ realized by Funds in 2022-23"
+    → `get_data('CGT_BY_GAINS_RANGE', filters={entity: 'funds',
+       income_year: '2022-23'}, measures='net_capital_gains_aud')`
+
+period_coverage: 2013-14 to 2022-23
+update_frequency: annual
+source_url: https://data.gov.au/data/dataset/taxation-statistics-2022-23
+download_url: https://data.gov.au/data/dataset/03326c3f-c0d3-4af4-afc7-c6ccc0a02223/resource/8ebcc9a7-9b4d-4f51-9228-eb75def9bf32/download/ts23cgt02netcapitalgainsbyentitytaxstatusgains.xlsx
+discovery:
+  organization_id: australiantaxationoffice
+  package_id_pattern: '^taxation-statistics-(\d{4})-\d{2}$'
+  resource_name: CGT - Table 2
+format: xlsx
+sheet: Table 2
+header_row: 2
+layout: wide
+cache_kind: data
+search_keywords:
+  - capital gains
+  - cgt
+  - net capital gains
+  - capital gains distribution
+  - large capital gains
+  - cgt by entity
+  - cgt brackets
+  - cgt size
+  - high net worth gains
+  - cgt taxable status
+columns:
+  income_year:
+    source_column: "Income Year1"
+    description: ATO income year ("YYYY-YY").
+    role: dimension
+    dtype: string
+  entity:
+    source_column: "Entity"
+    description: Entity type (Individuals / Companies / Funds).
+    role: dimension
+    dtype: string
+  taxable_status:
+    source_column: "Taxable status"
+    description: Taxable / Non Taxable.
+    role: dimension
+    dtype: string
+  gains_range:
+    source_column: "Net capital gains ranges"
+    description: |
+      Net-capital-gains-amount bracket. ATO uses a letter-prefixed band
+      label: 'a. $1 to $9', 'b. $10 - $99', ..., 'h. $10,000,000 or more'.
+    role: dimension
+    dtype: string
+  count:
+    source_column: "no."
+    description: Number of entities with net capital gains in this bracket.
+    unit: Entities
+    role: measure
+    dtype: int
+  net_capital_gains_aud:
+    source_column: "Net capital gains\n$"
+    description: Total net capital gains in AUD for entities in this bracket.
+    unit: AUD
+    role: measure
+    dtype: float
+dimension_values:
+  entity:
+    individuals:  "Individuals"
+    companies:    "Companies"
+    funds:        "Funds"
+  taxable_status:
+    taxable:      "Taxable"
+    non_taxable:  "Non Taxable"
+  gains_range:
+    "1_9":            "a. $1 to $9"
+    "10_99":          "b. $10 - $99"
+    "100_999":        "c. $100 - $999"
+    "1k_10k":         "d. $1,000 - $9,999"
+    "10k_100k":       "e. $10,000 - $99,999"
+    "100k_1m":        "f. $100,000 - $999,999"
+    "1m_plus":        "g. $1,000,000 or more"
