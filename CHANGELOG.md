@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.18] - 2026-05-18
+
+### Improved — year-range hint instead of misleading fuzzy match
+
+For year-shaped dims (4-digit numeric), filter typo errors now report
+the valid range AND the direction of the miss instead of fuzzy-matching
+to a similar number ('2022' → '2002' was the misleading behaviour).
+Matches aihw 0.4.16 / apra 0.8.18 / asic 0.6.13 design.
+
+326 unit tests pass.
+
 ## [0.8.17] - 2026-05-18
 
 ### Added — `IND_AGE_INCOME` curated (Tax Statistics Table 3A — by age × income range)
