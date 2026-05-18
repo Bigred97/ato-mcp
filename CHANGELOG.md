@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.23] - 2026-05-19
+
+### Fixed — `truncated_at` now fires correctly with shape-time short-circuit
+
+0.8.22's emit-time short-circuit in `shape_wide` / `shape_transposed`
+stopped at exactly `limit` records when the natural set overflowed,
+which made `build_response`'s post-hoc `original_count > limit` check
+a no-op — customers received N rows with `truncated_at=None` even
+when many more rows existed upstream.
+
+Fix: shape-time cap is now `limit + 1` (or `_HARD_MAX_RECORDS + 1`),
+the standard pagination "+1 sentinel" pattern. shape_wide emits one
+record PAST the user's limit if the natural set has more, so the
+existing `original_count > limit` truthfully distinguishes truncation
+from exact-match. The sentinel row is sliced off before serialisation;
+customers never see it.
+
+Behaviour after the fix:
+- `get_data(IND_POSTCODE, limit=3)` over 50-row natural set: returns
+  3 rows + `truncated_at=4` (at least 4 — really 50 but we stopped
+  counting).
+- `get_data(IND_POSTCODE, limit=10)` over 10-row natural set: returns
+  10 rows + `truncated_at=None` (exact match, nothing more).
+- `latest(ACNC_AIS_FINANCIALS, limit=5)` over 853k natural: returns
+  5 rows + `truncated_at=100001` (capped at the hard ceiling +1
+  sentinel).
+
+CI on 0.8.22 caught the original miss via the new test_shape_cap
+suite. The memory profile fix in 0.8.22 is unchanged — this is a
+correctness follow-up to that release.
+
 ## [0.8.22] - 2026-05-19
 
 ### Fixed — ACNC_AIS_FINANCIALS OOM (worker RSS 1.16 GB → ~300 MB)

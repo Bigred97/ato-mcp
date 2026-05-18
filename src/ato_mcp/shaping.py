@@ -627,21 +627,28 @@ def build_response(
     measure_keys = resolve_measure_keys(cd, measures)
 
     # Compute the emit-time cap that shape_wide / shape_transposed will
-    # short-circuit on. Two rules:
+    # short-circuit on. We pass `cap + 1` so shape_wide emits one record
+    # PAST what we plan to return — that way `original_count > limit` in
+    # the post-hoc slice below distinguishes a truthful truncation
+    # (natural set actually overflowed) from a natural-exact match
+    # (natural set was exactly `limit`). The +1 row is sliced off
+    # before serialisation, so customers never see it.
+    #
+    # Two rules:
     #   1. If last_n is set (latest() trims per-measure post-shape) we
     #      MUST materialize enough records for the trim to be meaningful,
     #      so we use the portfolio hard ceiling (`_HARD_MAX_RECORDS`).
-    #   2. Otherwise we can short-circuit at the caller's `limit` — anything
-    #      beyond that gets sliced post-hoc anyway. `_HARD_MAX_RECORDS`
-    #      acts as the absolute safety floor when limit is None.
+    #   2. Otherwise we short-circuit at the caller's `limit` — anything
+    #      beyond gets sliced post-hoc anyway. `_HARD_MAX_RECORDS` acts
+    #      as the absolute safety floor when limit is None.
     # This is what stops ACNC_AIS_FINANCIALS from materialising all 853k
     # Observations before slicing to 5 (peak RSS 1.16 GB → ~300 MB).
     if last_n is not None and last_n > 0:
-        shape_cap: int | None = _HARD_MAX_RECORDS
+        shape_cap: int | None = _HARD_MAX_RECORDS + 1
     elif limit is not None and limit > 0:
-        shape_cap = min(limit, _HARD_MAX_RECORDS)
+        shape_cap = min(limit + 1, _HARD_MAX_RECORDS + 1)
     else:
-        shape_cap = _HARD_MAX_RECORDS
+        shape_cap = _HARD_MAX_RECORDS + 1
 
     if cd.layout == "wide":
         records = shape_wide(filtered, cd, measure_keys, max_records=shape_cap)
