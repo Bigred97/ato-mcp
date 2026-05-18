@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.17] - 2026-05-18
+
+### Added — `IND_AGE_INCOME` curated (Tax Statistics Table 3A — by age × income range)
+
+Customer-sim flagged the distributional-analysis use case as unreachable —
+ATO publishes detailed sex × age × taxable-income-range data with all
+the CGT, dividend, rental, and superannuation columns in Table 3A, but
+no curated dataset exposed it. Resolved by curating `IND_AGE_INCOME`.
+
+Dimensions:
+- `sex` (Male / Female — Table 3A does NOT publish a Persons total)
+- `taxable_status` (Taxable / Non Taxable)
+- `age_range` (13 bands from Under 18 to 75+, plain-English keys like
+  `55_59`, `65_69`, `75_plus`)
+- `taxable_income_range_tax_brackets` (5 bands aligned with 2022-23 tax
+  brackets: `nil`, `18k_45k`, `45k_120k`, `120k_180k`, `180k_plus`)
+- `taxable_income_range` (fine-grained ~80 bands for drill-down)
+
+Measures include `capital_gain_net`, `capital_gain_total_current_year`,
+`capital_losses_carried_forward`, `rent_interest_deductions`,
+`rent_other_deductions`, `super_contributions_personal`,
+`super_contributions_employer_reportable`, `dividends_franked_total`,
+`franking_credits_total`, `salary_wages_total`, and more.
+
+Verification:
+- Net capital gains for 55-59 males taxable: $2.37B
+- Rent interest deductions distribution @ $45k-120k bracket peaks at
+  age 40-44 ($1.45B), declining to $55M for 75+
+
+326 unit tests pass.
+
 ## [0.8.16] - 2026-05-18
 
 ### Added — `limit` parameter on `get_data` for register-shaped datasets

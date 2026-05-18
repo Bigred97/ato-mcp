@@ -1,0 +1,245 @@
+id: IND_AGE_INCOME
+name: Individuals by Age, Sex, and Taxable Income Range (ATO Tax Statistics 2022-23)
+description: |
+  ATO Taxation Statistics Table 3A — selected items for individuals, by
+  sex × taxable status × age range × taxable income range for the 2022-23
+  income year. The distributional-analysis goldmine: ~13 age bands ×
+  ~9 income ranges × 2 taxable statuses × 3 sex categories = ~700 cells,
+  each carrying salary/wages, dividends, capital gains, rental deductions,
+  superannuation contributions, and 30+ other tax items.
+
+  Direct answer for:
+  - **Capital gains by age** — `measure=capital_gain_total` filtered to
+    a specific age band shows who's realizing capital gains
+  - **Negative gearing by age** — `measure=rent_interest_deductions`
+    filtered by age + income range surfaces the leveraged-property
+    cohort
+  - **Superannuation contributions by age** — both employer SG and
+    personal contributions broken down by income range
+  - **Salary/wages distribution by age** — the conventional age-vs-income
+    chart
+  - **Capital-loss carry-forward stock by age** — losses being held
+    against future gains
+
+  Customer query examples:
+  - "Net capital gains for 55-59 year-old males in 2022-23"
+    → `get_data('IND_AGE_INCOME', filters={age_range: 'i. 55-59',
+       sex: 'male', taxable_status: 'taxable'},
+       measures='capital_gain_net')`
+  - "Rental interest deductions by age band (all sexes summed)"
+    → `get_data('IND_AGE_INCOME', filters={taxable_status: 'taxable'},
+       measures='rent_interest_deductions')` then sum male+female
+       per age client-side
+  - "Top 1% income earners' net capital gains" (use Table 16 instead — that's
+    percentile-distribution; this table is age × income range)
+
+  Cell granularity: each record is one (sex × taxable_status × age_range
+  × income_range × measure) combination. Table 3A does NOT publish a
+  Persons (sex-combined) total; pass sex=male or sex=female, or omit
+  to get both and sum.
+
+  Source: ATO Taxation Statistics, dataset on data.gov.au.
+
+period_coverage: 2022-23
+update_frequency: annual
+source_url: https://data.gov.au/data/dataset/taxation-statistics-2022-23
+download_url: https://data.gov.au/data/dataset/03326c3f-c0d3-4af4-afc7-c6ccc0a02223/resource/a7f8226a-af03-431a-80f3-cdca85a9d63e/download/ts23individual03sextaxablestatusagerangetaxableincomerange.xlsx
+discovery:
+  organization_id: australiantaxationoffice
+  package_id_pattern: '^taxation-statistics-(\d{4})-\d{2}$'
+  resource_name: Individuals - Table 3
+format: xlsx
+sheet: Table 3A
+header_row: 2
+layout: wide
+cache_kind: data
+search_keywords:
+  - by age
+  - age range
+  - age band
+  - distributional analysis
+  - capital gains by age
+  - negative gearing by age
+  - rental deductions by age
+  - super contributions by age
+  - dividends by age
+  - salary by age
+  - cgt distribution
+  - wealth distribution
+  - personal tax age
+  - cohort analysis
+  - retirees tax
+  - working age tax
+columns:
+  sex:
+    source_column: "Sex4"
+    description: Sex (Male / Female / Persons = both).
+    role: dimension
+    dtype: string
+  taxable_status:
+    source_column: "Taxable status"
+    description: "'Taxable' = positive tax liability; 'Non Taxable' = nil liability."
+    role: dimension
+    dtype: string
+  age_range:
+    source_column: "Age range3"
+    description: |
+      Age band: a. Under 18, b. 18-24, c. 25-29, d. 30-34, e. 35-39,
+      f. 40-44, g. 45-49, h. 50-54, i. 55-59, j. 60-64, k. 65-69,
+      l. 70-74, m. 75 and over.
+    role: dimension
+    dtype: string
+  taxable_income_range:
+    source_column: "Taxable income range"
+    description: |
+      Fine-grained taxable income band (~80 bands from "$6,000 or less"
+      up through "$1,000,001 or more"). Customers wanting tax-bracket-level
+      aggregation should filter on `taxable_income_range_tax_brackets`
+      instead and sum.
+    role: dimension
+    dtype: string
+  taxable_income_range_tax_brackets:
+    source_column: "Taxable income range - tax brackets5"
+    description: |
+      Taxable income bracket aligned with the 2022-23 tax-bracket boundaries
+      ($18,200 tax-free threshold, $45k 19%, $120k 32.5%, $180k 37%, top 45%).
+      Each bracket contains 5-15 finer `taxable_income_range` bands.
+    role: dimension
+    dtype: string
+  individuals_count:
+    source_column: "Individuals\nno."
+    description: Number of individuals in this cell.
+    unit: Persons
+    role: measure
+    dtype: int
+  taxable_income_total:
+    source_column: "Taxable income or loss2\n$"
+    description: Total taxable income (or loss) summed across all individuals in the cell.
+    unit: AUD
+    role: measure
+    dtype: float
+  salary_wages_total:
+    source_column: "Salary or wages\n$"
+    description: Total salary and wages.
+    unit: AUD
+    role: measure
+    dtype: float
+  dividends_franked_total:
+    source_column: "Dividends franked\n$"
+    description: Total franked dividend income.
+    unit: AUD
+    role: measure
+    dtype: float
+  dividends_unfranked_total:
+    source_column: "Dividends unfranked\n$"
+    description: Total unfranked dividend income.
+    unit: AUD
+    role: measure
+    dtype: float
+  franking_credits_total:
+    source_column: "Dividends franking credit\n$"
+    description: Total franking credits.
+    unit: AUD
+    role: measure
+    dtype: float
+  gross_interest_total:
+    source_column: "Gross interest\n$"
+    description: Total gross interest income.
+    unit: AUD
+    role: measure
+    dtype: float
+  capital_gain_net:
+    source_column: "Capital gains net capital gain\n$"
+    description: Net capital gain ($ after applying the 50% CGT discount and offsetting losses).
+    unit: AUD
+    role: measure
+    dtype: float
+  capital_gain_total_current_year:
+    source_column: "Capital gains total current year capital gains\n$"
+    description: Total current-year capital gains (gross, before discount).
+    unit: AUD
+    role: measure
+    dtype: float
+  capital_losses_carried_forward:
+    source_column: "Capital gains net capital losses carried forward\n$"
+    description: Net capital losses carried forward to next year.
+    unit: AUD
+    role: measure
+    dtype: float
+  rent_interest_deductions:
+    source_column: "Rent interest deductions\n$"
+    description: |
+      Interest claimed against rental income — the classic negative-gearing
+      lever. High totals concentrated in 45-64 age bands historically.
+    unit: AUD
+    role: measure
+    dtype: float
+  rent_other_deductions:
+    source_column: "Rent other rental deductions\n$"
+    description: Other rental property deductions (depreciation, repairs, agent fees, etc.).
+    unit: AUD
+    role: measure
+    dtype: float
+  super_contributions_personal:
+    source_column: "Personal superannuation contributions\n$"
+    description: Personal (non-employer) superannuation contributions.
+    unit: AUD
+    role: measure
+    dtype: float
+  super_contributions_employer_reportable:
+    source_column: "Reportable employer superannuation contributions\n$"
+    description: Reportable employer super contributions (salary-sacrifice + above-SG employer payments).
+    unit: AUD
+    role: measure
+    dtype: float
+  super_income_stream_taxed:
+    source_column: "Australian annuities and superannuation income streams taxable component taxed element\n$"
+    description: Super pension income (taxed element) — typical retiree income.
+    unit: AUD
+    role: measure
+    dtype: float
+  super_income_stream_untaxed:
+    source_column: "Australian annuities and superannuation income streams taxable component untaxed element\n$"
+    description: Super pension income (untaxed element).
+    unit: AUD
+    role: measure
+    dtype: float
+dimension_values:
+  sex:
+    male: "Male"
+    female: "Female"
+    men: "Male"
+    women: "Female"
+    # NOTE: Table 3A does not publish a 'Persons' (combined) row. Pass
+    # sex=male or sex=female; or omit the filter to receive both
+    # series and sum them client-side. The cell granularity is
+    # (sex × taxable_status × age × income_range).
+  taxable_status:
+    taxable: "Taxable"
+    non_taxable: "Non Taxable"
+  age_range:
+    # ATO Table 3A uses 'Letter. NN - NN' format with spaces around the
+    # hyphen (different from SUPER_CONTRIB_AGE which uses 'NN-NN' tight).
+    # Plain-English shortcuts map both formats and case variations.
+    under_18: "a. Under 18"
+    "18_24": "b. 18 - 24"
+    "25_29": "c. 25 - 29"
+    "30_34": "d. 30 - 34"
+    "35_39": "e. 35 - 39"
+    "40_44": "f. 40 - 44"
+    "45_49": "g. 45 - 49"
+    "50_54": "h. 50 - 54"
+    "55_59": "i. 55 - 59"
+    "60_64": "j. 60 - 64"
+    "65_69": "k. 65 - 69"
+    "70_74": "l. 70 - 74"
+    "75_plus": "m. 75 and over"
+    "75_and_over": "m. 75 and over"
+  taxable_income_range_tax_brackets:
+    # 2022-23 tax bracket boundaries — single-key shortcuts for the
+    # five published bands.
+    nil: "a. $18,200 or less"
+    "18k_45k": "b. $18,201 to $45,000"
+    "45k_120k": "c. $45,001 to $120,000"
+    "120k_180k": "d. $120,001 to $180,000"
+    "180k_plus": "e. $180,001 or more"
