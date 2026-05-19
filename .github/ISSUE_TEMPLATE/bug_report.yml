@@ -13,7 +13,7 @@ body:
     attributes:
       label: ato-mcp version
       description: Run `python -c "import ato_mcp; print(ato_mcp.__version__)"`
-      placeholder: 0.1.1
+      placeholder: 0.8.24
     validations:
       required: true
 
