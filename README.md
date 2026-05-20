@@ -1,5 +1,7 @@
 # ato-mcp
 
+mcp-name: io.ausdata/ato-mcp
+
 [![PyPI](https://img.shields.io/pypi/v/ato-mcp.svg)](https://pypi.org/project/ato-mcp/)
 [![Python](https://img.shields.io/pypi/pyversions/ato-mcp.svg)](https://pypi.org/project/ato-mcp/)
 [![License](https://img.shields.io/pypi/l/ato-mcp.svg)](https://github.com/Bigred97/ato-mcp/blob/main/LICENSE)
