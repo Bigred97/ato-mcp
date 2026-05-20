@@ -17,6 +17,7 @@ from __future__ import annotations
 import pytest
 
 from ato_mcp import curated, parsing, shaping
+from ato_mcp.shaping import _clean_period_label
 
 
 def _parse(cd, body):
@@ -24,6 +25,33 @@ def _parse(cd, body):
         body, sheet=cd.sheet, header_row=cd.header_row,
         data_start_row=cd.data_start_row,
     )
+
+
+def test_period_extract_field_loads():
+    """FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY declares a period_extract regex."""
+    cd = curated.get("FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY")
+    assert cd is not None
+    assert cd.period_extract == r"(\d{4})"
+
+
+def test_clean_period_label_extracts_year():
+    """Verbose source period headers normalise to a clean 4-digit year."""
+    cd = curated.get("FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY")
+    assert _clean_period_label("Registered interests at 30 June 2025 (no.)", cd) == "2025"
+    assert _clean_period_label("Registered interests at 30 June 2024 (no.)", cd) == "2024"
+
+
+def test_clean_period_label_falls_back_when_no_match():
+    """A header with no 4-digit year passes through unchanged."""
+    cd = curated.get("FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY")
+    assert _clean_period_label("Country total", cd) == "Country total"
+
+
+def test_clean_period_label_noop_without_pattern():
+    """Datasets without period_extract are unaffected (raw header preserved)."""
+    cd = curated.get("GST_MONTHLY")  # no period_extract
+    assert cd.period_extract is None
+    assert _clean_period_label("2024-06", cd) == "2024-06"
 
 
 def test_gst_monthly_yaml_loads():

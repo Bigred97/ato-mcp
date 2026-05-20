@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.25] — 2026-05-20
+
+### Fixed — verbose period label leaking into FOREIGN_OWNERSHIP records
+
+A data-quality audit found `FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY`
+surfacing the raw source column header as the period field — e.g.
+`"Registered interests at 30 June 2025 (no.)"` instead of `"2025"`. The
+value was correct (China 22,272 at 30 June 2025, verified against source)
+but the period broke the portfolio YYYY convention and made cross-source
+joins on period impossible.
+
+Added an opt-in `period_extract` regex to the curated schema. When a
+transposed dataset declares one (e.g. `period_extract: '(\d{4})'`), the
+shaper applies it to each period-column header and uses the captured
+group as the clean period, falling back to the raw header on no match.
+`FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY` now returns period `"2025"`.
+
+Datasets without `period_extract` (every other transposed table) are
+unaffected.
+
 ## [0.8.24] — 2026-05-19
 
 ### Fixed

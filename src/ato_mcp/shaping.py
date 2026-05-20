@@ -370,6 +370,27 @@ def shape_wide(
     return records
 
 
+def _clean_period_label(raw_period: str, cd: CuratedDataset) -> str:
+    """Normalise a transposed period-column header to a clean period.
+
+    When the curated dataset declares a `period_extract` regex (one capture
+    group), apply it to the raw column header and return the captured group
+    (e.g. "Registered interests at 30 June 2025 (no.)" → "2025"). Falls back
+    to the raw header when there's no pattern or no match, so datasets
+    without `period_extract` are unaffected.
+    """
+    pattern = getattr(cd, "period_extract", None)
+    if not pattern:
+        return raw_period
+    try:
+        m = re.search(pattern, raw_period)
+    except re.error:
+        return raw_period
+    if m and m.groups():
+        return m.group(1)
+    return raw_period
+
+
 def shape_transposed(
     df: pd.DataFrame,
     cd: CuratedDataset,
@@ -472,7 +493,7 @@ def shape_transposed(
                 continue
             records.append(
                 Observation(
-                    period=str(period_col),
+                    period=_clean_period_label(str(period_col), cd),
                     value=value,
                     measure=display_metric,
                     dimensions={"metric_source_label": label},

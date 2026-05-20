@@ -88,6 +88,14 @@ class CuratedDataset:
     # and what unit column to read alongside (typically column B).
     metric_label_column: str | None = None
     unit_column: str | None = None
+    # For transposed tables whose period columns carry verbose source
+    # headers (e.g. "Registered interests at 30 June 2025 (no.)"), an
+    # optional regex with one capture group. The shaper applies it to each
+    # period-column header and uses the captured group as the clean period
+    # (e.g. r"(\d{4})" → "2025"). Falls back to the raw header when the
+    # pattern doesn't match, so it's safe to leave unset. Keeps the period
+    # field on the portfolio YYYY / YYYY-MM convention.
+    period_extract: str | None = None
     # Optional auto-discovery spec: when present, the server resolves the
     # current download URL via CKAN at fetch time so new yearly releases
     # land without a YAML edit. See discovery.py.
@@ -187,6 +195,7 @@ def _load_one(path: Path) -> CuratedDataset:
         search_keywords=tuple(raw.get("search_keywords") or ()),
         metric_label_column=raw.get("metric_label_column"),
         unit_column=raw.get("unit_column"),
+        period_extract=raw.get("period_extract"),
         discovery=discovery_raw,
     )
 

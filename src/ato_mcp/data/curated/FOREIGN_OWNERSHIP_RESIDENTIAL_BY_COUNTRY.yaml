@@ -41,6 +41,10 @@ header_row: 10
 layout: transposed
 cache_kind: data
 metric_label_column: "Country"
+# Source period columns are verbose ("Registered interests at 30 June 2025
+# (no.)"). Extract the 4-digit year so the period field stays on the
+# portfolio YYYY convention instead of leaking the raw header.
+period_extract: '(\d{4})'
 search_keywords:
   - foreign ownership residential
   - foreign property
