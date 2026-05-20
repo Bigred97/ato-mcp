@@ -9,6 +9,8 @@
 
 **MCP server for Australian Taxation Office statistics.** Plain-English access to personal tax by postcode, company tax by industry, corporate tax transparency for every $100M+ entity, super contributions by age, salary by occupation, monthly GST collections, and the live ACNC charity register — all from a single `uvx` command.
 
+> **Hosted access?** For cross-source queries, webhooks, an always-on REST API, and a uniform response envelope across all 9 sources, see **[ausdata.io](https://ausdata.io)** — free tier available (500 calls/mo, no card).
+
 ```text
 "What's the median taxable income in postcode 2000?"
 "How much tax did BHP pay last year?"
