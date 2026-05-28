@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.27] — 2026-05-21
+
+### Changed — enforce ASCENDING record ordering (portfolio convention)
+
+Per the new binding portfolio convention (see top-level CLAUDE.md),
+`DataResponse.records` are now guaranteed **ascending by period** (oldest
+first, newest last) so consumers can rely on `records[-1]` being the most
+recent observation. `build_response` stable-sorts records by period before
+unit/format handling.
+
+Applies to the transposed datasets that carry a real period (GST_MONTHLY,
+FOREIGN_OWNERSHIP_*). Wide-layout and time-in-measure-key datasets
+(IND_POSTCODE_MEDIAN) have null periods that stable-sort last, preserving
+source order. Completes the portfolio-wide ordering rollout
+(rba/aemo/apra/abs/ato).
+
 ## [0.8.26] — 2026-05-21
 
 ### Added

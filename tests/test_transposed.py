@@ -84,6 +84,24 @@ def test_gst_monthly_all_measures(gst_monthly_xlsx):
     assert returned_measures == aliases
 
 
+def test_gst_monthly_records_ascending_by_period(gst_monthly_xlsx):
+    """Portfolio convention (../CLAUDE.md): records MUST be ascending by
+    period (oldest first, newest last) so consumers can rely on records[-1]
+    being the most recent month. GST_MONTHLY is a 48-month transposed series."""
+    cd = curated.get("GST_MONTHLY")
+    df = _parse(cd, gst_monthly_xlsx)
+    resp = shaping.build_response(
+        cd=cd, df=df, filters={}, measures="net_gst",
+        start_period=None, end_period=None, fmt="records", user_query={},
+    )
+    periods = [r.period for r in resp.records if r.period]
+    assert len(periods) >= 2
+    assert periods == sorted(periods), (
+        f"records must be ascending by period; got {periods[:3]}...{periods[-3:]}"
+    )
+    assert periods[-1] == max(periods), "records[-1] must be the most recent month"
+
+
 def test_gst_monthly_single_measure_filter(gst_monthly_xlsx):
     cd = curated.get("GST_MONTHLY")
     df = _parse(cd, gst_monthly_xlsx)

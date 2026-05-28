@@ -722,6 +722,15 @@ def build_response(
                 )
                 records.extend(group_sorted[-last_n:])
 
+    # Portfolio convention (../CLAUDE.md): records MUST be ASCENDING by period
+    # (oldest first, newest last) so consumers can rely on records[-1] being
+    # the most recent observation. Applies to the transposed datasets that
+    # carry a real period (GST_MONTHLY, FOREIGN_OWNERSHIP_*). Wide layouts and
+    # time-in-measure-key datasets (IND_POSTCODE_MEDIAN) have null periods that
+    # stable-sort last, preserving source order. ATO periods (YYYY / YYYY-MM /
+    # FY 'YYYY-YY' / ISO date) sort lexicographically into chronological order.
+    records.sort(key=lambda r: (r.period is None, r.period or ""))
+
     response_unit: str | None = None
     if records:
         units = {r.unit for r in records if r.unit}
