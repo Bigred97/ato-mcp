@@ -4,7 +4,7 @@ Mirrors the response shape used by abs-mcp and rba-mcp so a downstream agent
 that calls multiple Australian government MCPs gets a uniform envelope.
 ATO-specific differences:
 - attribution names ATO/ACNC and the data.gov.au Creative Commons licence
-- DataResponse.source defaults to "Australian Taxation Office"
+- DataResponse.source defaults to "Australian Taxation Office (ATO) + ACNC, via data.gov.au"
 - DataResponse.ato_url points back at the data.gov.au dataset page
 - Observation.dimensions is open-ended (postcode, state, industry, ABN, etc.)
 """
@@ -88,7 +88,7 @@ class DataResponse(BaseModel):
     row_count: int = 0
     records: list[Any] = Field(default_factory=list)
     csv: str | None = None
-    source: str = "Australian Taxation Office"
+    source: str = "Australian Taxation Office (ATO) + ACNC, via data.gov.au"
     attribution: str = _ATO_ATTRIBUTION
     retrieved_at: datetime
     source_url: str = Field(

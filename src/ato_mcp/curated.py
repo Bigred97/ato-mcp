@@ -88,6 +88,18 @@ class CuratedDataset:
     # and what unit column to read alongside (typically column B).
     metric_label_column: str | None = None
     unit_column: str | None = None
+    # Unit contract (../CLAUDE.md): every numeric Observation.value MUST carry
+    # a non-null `unit` in native source scale. The wide path reads this from
+    # each measure column's `unit`. Transposed tables have no measure columns,
+    # so unit either rides in `unit_column` (which can be blank per-row) or
+    # isn't in the source at all. These two fields let a transposed YAML declare
+    # the unit out-of-band so the shaper never emits a null unit:
+    #   - metric_units: per-metric-alias unit (for mixed-unit tables like SMSF
+    #     where Total SMSFs is a count but Total gross assets is $m).
+    #   - default_unit: dataset-wide fallback when neither the source unit cell
+    #     nor metric_units yields a unit. Use native scale; do NOT convert.
+    metric_units: dict[str, str] | None = None
+    default_unit: str | None = None
     # For transposed tables whose period columns carry verbose source
     # headers (e.g. "Registered interests at 30 June 2025 (no.)"), an
     # optional regex with one capture group. The shaper applies it to each
@@ -175,6 +187,15 @@ def _load_one(path: Path) -> CuratedDataset:
     if discovery_raw is not None and not isinstance(discovery_raw, dict):
         raise ValueError(f"{path.name}: discovery must be a mapping if provided")
 
+    metric_units_raw = raw.get("metric_units")
+    if metric_units_raw is not None:
+        if not isinstance(metric_units_raw, dict):
+            raise ValueError(
+                f"{path.name}: metric_units must be a mapping of "
+                f"metric-alias -> unit string, got {type(metric_units_raw).__name__}"
+            )
+        metric_units_raw = {str(k): str(v) for k, v in metric_units_raw.items()}
+
     return CuratedDataset(
         id=str(raw["id"]),
         name=str(raw["name"]),
@@ -195,6 +216,8 @@ def _load_one(path: Path) -> CuratedDataset:
         search_keywords=tuple(raw.get("search_keywords") or ()),
         metric_label_column=raw.get("metric_label_column"),
         unit_column=raw.get("unit_column"),
+        metric_units=metric_units_raw,
+        default_unit=raw.get("default_unit"),
         period_extract=raw.get("period_extract"),
         discovery=discovery_raw,
     )

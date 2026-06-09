@@ -278,3 +278,71 @@ def test_apply_aliases_preserves_period_columns_for_transposed(gst_monthly_xlsx)
     assert "unit" in aliased.columns
     period_cols = [c for c in aliased.columns if c not in ("metric_label", "unit")]
     assert len(period_cols) == 48
+
+
+def test_gst_monthly_records_all_carry_unit(gst_monthly_xlsx):
+    """Unit contract (../CLAUDE.md): every numeric Observation.value must carry
+    a non-null unit. The transposed path used to read unit solely from the
+    source unit_column cell, which yields None on a blank row."""
+    cd = curated.get("GST_MONTHLY")
+    df = _parse(cd, gst_monthly_xlsx)
+    resp = shaping.build_response(
+        cd=cd, df=df, filters={}, measures=None,
+        start_period=None, end_period=None, fmt="records", user_query={},
+    )
+    assert all(r.unit is not None for r in resp.records)
+    assert all(r.unit == "$m" for r in resp.records)
+
+
+def test_transposed_blank_source_unit_falls_back_to_non_null(gst_monthly_xlsx):
+    """Regression for the transposed unit-contract bug (shaping.py ~line 484).
+
+    When a row's source `unit_column` cell is blank/None, shape_transposed must
+    NOT emit unit=None for that row's observations — it falls back (here to the
+    GST_MONTHLY `default_unit: $m`). We blank the unit cell of one metric row
+    and confirm its observations still carry a non-null native-scale unit."""
+    import pandas as pd
+
+    cd = curated.get("GST_MONTHLY")
+    # Synthetic post-alias transposed frame: metric_label, unit, period cols.
+    # The 'Net GST' row has a BLANK unit cell; 'Gross GST payable' has '$m'.
+    df = pd.DataFrame(
+        {
+            "metric_label": ["Net GST", "Gross GST payable"],
+            "unit": [None, "$m"],          # blank source unit on the first row
+            "2024-05": [100.0, 200.0],
+            "2024-06": [110.0, 210.0],
+        }
+    )
+    records = shaping.shape_transposed(df, cd, [], None, None)
+    # No record may carry a null unit despite the blank source cell.
+    assert records, "expected observations from the synthetic frame"
+    assert all(r.unit is not None for r in records)
+    # The blanked 'Net GST' row falls back to the declared default_unit ($m),
+    # native scale, no value conversion.
+    net_gst = [r for r in records if r.measure == "net_gst"]
+    assert net_gst, "expected net_gst observations"
+    assert all(r.unit == "$m" for r in net_gst)
+    assert {r.value for r in net_gst} == {100.0, 110.0}  # values untouched
+    # The row that DID carry a source unit keeps it.
+    gross = [r for r in records if r.measure == "gross_gst"]
+    assert all(r.unit == "$m" for r in gross)
+
+
+def test_foreign_residential_records_carry_unit():
+    """FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY declares no unit_column; the
+    transposed shaper must supply its declared default_unit on every row."""
+    import pandas as pd
+
+    cd = curated.get("FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY")
+    assert cd.default_unit == "Registered interests"
+    df = pd.DataFrame(
+        {
+            "country": ["People's Republic of China", "Singapore"],
+            "Registered interests at 30 June 2024 (no.)": [23550.0, 1900.0],
+            "Registered interests at 30 June 2025 (no.)": [22272.0, 1978.0],
+        }
+    )
+    records = shaping.shape_transposed(df, cd, [], None, None)
+    assert records
+    assert all(r.unit == "Registered interests" for r in records)

@@ -26,6 +26,9 @@ layout: transposed
 cache_kind: data
 metric_label_column: "Unnamed: 0"
 unit_column: "Unnamed: 1"
+# Every published row carries '$m' (millions AUD) in the unit column, but a
+# blank unit cell must still satisfy the unit contract — fall back to '$m'.
+default_unit: $m
 search_keywords:
   - gst
   - net gst

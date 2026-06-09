@@ -23,6 +23,7 @@ from typing import Any
 import pandas as pd
 
 from .curated import (
+    CuratedColumn,
     CuratedDataset,
     dimension_columns,
     id_columns,
@@ -391,6 +392,43 @@ def _clean_period_label(raw_period: str, cd: CuratedDataset) -> str:
     return raw_period
 
 
+# Final hard fallback so the unit contract is never violated even when a
+# transposed YAML omits both metric_units and default_unit.
+_TRANSPOSED_UNIT_LAST_RESORT = "Unknown"
+
+
+def _resolve_transposed_unit(
+    *,
+    source_unit: str | None,
+    metric_alias: str,
+    cd: CuratedDataset,
+    unit_curated: CuratedColumn | None = None,
+    label_curated: CuratedColumn | None = None,
+) -> str:
+    """Guarantee a non-null unit for a transposed-path Observation.
+
+    Resolution order (native scale, no value conversion):
+      1. the source `unit_column` cell value (when present and non-blank);
+      2. the dataset's per-metric `metric_units[alias]` declaration;
+      3. the unit column's declared `unit`, then the metric-label column's;
+      4. the dataset-wide `default_unit`;
+      5. a documented last-resort string so the contract is never violated.
+    """
+    if source_unit:
+        return source_unit
+    if cd.metric_units:
+        declared = cd.metric_units.get(metric_alias)
+        if declared:
+            return declared
+    if unit_curated is not None and unit_curated.unit:
+        return unit_curated.unit
+    if label_curated is not None and label_curated.unit:
+        return label_curated.unit
+    if cd.default_unit:
+        return cd.default_unit
+    return _TRANSPOSED_UNIT_LAST_RESORT
+
+
 def shape_transposed(
     df: pd.DataFrame,
     cd: CuratedDataset,
@@ -425,12 +463,14 @@ def shape_transposed(
     label_alias: str | None = None
     unit_alias: str | None = None
     label_curated = None
+    unit_curated = None
     for c in cd.columns.values():
         if c.source_column == cd.metric_label_column:
             label_alias = c.key
             label_curated = c
         if cd.unit_column and c.source_column == cd.unit_column:
             unit_alias = c.key
+            unit_curated = c
     if label_alias is None:
         raise ValueError(
             f"Dataset {cd.id!r} declares metric_label_column "
@@ -476,17 +516,33 @@ def shape_transposed(
     else:
         filtered = df
 
+    # Source-value -> curated-alias map, built once (was rebuilt per row).
+    reverse_alias = (
+        {v: k for k, v in metric_alias_map.items()} if metric_alias_map else {}
+    )
+
     records: list[Observation] = []
     for _, row in filtered.iterrows():
         label = _safe_str(row[label_col])
         if label is None:
             continue
-        unit = _safe_str(row[unit_col]) if unit_col and unit_col in df.columns else None
+        source_unit = _safe_str(row[unit_col]) if unit_col and unit_col in df.columns else None
         # If we have a reverse map, prefer to surface the curated alias.
-        display_metric = label
-        if metric_alias_map:
-            reverse = {v: k for k, v in metric_alias_map.items()}
-            display_metric = reverse.get(label, label)
+        display_metric = reverse_alias.get(label, label)
+        # Unit contract (../CLAUDE.md): every numeric value MUST carry a
+        # non-null unit in native scale. The source `unit_column` cell can be
+        # blank (GST blank rows) or absent entirely (datasets with no
+        # unit_column, e.g. SMSF_FUNDS / FOREIGN_OWNERSHIP_RESIDENTIAL).
+        # Fall back, in order, to: the source cell → per-metric declared unit
+        # → the unit column's declared unit → the dataset default → "Unknown".
+        # No value conversion happens — only the label is supplied.
+        unit = _resolve_transposed_unit(
+            source_unit=source_unit,
+            metric_alias=display_metric,
+            cd=cd,
+            unit_curated=unit_curated,
+            label_curated=label_curated,
+        )
         for period_col in period_cols:
             value = _safe_value(row[period_col])
             if value is None:

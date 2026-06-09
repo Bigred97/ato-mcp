@@ -28,6 +28,14 @@ max_rows: 3
 layout: transposed
 cache_kind: data
 metric_label_column: ""
+# No unit_column in the source and units differ per metric, so declare them
+# out-of-band (native scale, no conversion) to honour the unit contract:
+# fund/member counts vs gross assets in $ millions.
+metric_units:
+  total_smsfs: Funds
+  total_members: Persons
+  total_gross_assets_millions: $m
+default_unit: Count
 search_keywords:
   - smsf
   - self managed super

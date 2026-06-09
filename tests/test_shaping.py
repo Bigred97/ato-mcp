@@ -273,7 +273,7 @@ def test_response_carries_metadata(corp_transparency_xlsx):
     )
     assert resp.dataset_id == "CORP_TRANSPARENCY"
     assert resp.dataset_name
-    assert resp.source == "Australian Taxation Office"
+    assert resp.source == "Australian Taxation Office (ATO) + ACNC, via data.gov.au"
     assert "Creative Commons" in resp.attribution
     assert resp.ato_url == cd.source_url
     assert resp.query == {"x": 1}

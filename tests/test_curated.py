@@ -49,6 +49,52 @@ def test_every_curated_dataset_has_required_fields():
             assert "measure" in roles, f"wide {cd.id} declares no measure columns"
 
 
+def test_unit_contract_every_dataset_can_supply_a_non_null_unit():
+    """Unit contract (../CLAUDE.md): every numeric Observation.value MUST carry
+    a non-null `unit`. This scans ALL curated datasets statically:
+
+      - wide datasets: every role=measure column must declare a `unit`;
+      - transposed datasets: the shaper must resolve a non-null unit for EVERY
+        metric alias even in the worst case (a blank/absent source unit cell).
+
+    Catching it here means a new YAML can't reintroduce the transposed null-unit
+    gap (shaping.py ~line 484) without failing this test.
+    """
+    from ato_mcp import shaping
+
+    for cd in curated.list_all():
+        if cd.layout == "wide":
+            for c in curated.measure_columns(cd):
+                assert c.unit, (
+                    f"wide {cd.id} measure column {c.key!r} has no declared unit "
+                    "— violates the unit contract"
+                )
+            continue
+        # Transposed: resolve the unit_column's CuratedColumn (if any) the same
+        # way shape_transposed does, then assert worst-case resolution (no source
+        # unit cell) yields a non-null unit for every metric alias.
+        unit_curated = None
+        label_curated = None
+        for c in cd.columns.values():
+            if c.source_column == cd.metric_label_column:
+                label_curated = c
+            if cd.unit_column and c.source_column == cd.unit_column:
+                unit_curated = c
+        for alias in curated.transposed_measure_aliases(cd):
+            resolved = shaping._resolve_transposed_unit(
+                source_unit=None,
+                metric_alias=alias,
+                cd=cd,
+                unit_curated=unit_curated,
+                label_curated=label_curated,
+            )
+            assert resolved, (
+                f"transposed {cd.id} metric {alias!r} resolves to a null/empty "
+                "unit when the source unit cell is blank — declare metric_units, "
+                "default_unit, or a unit on the unit_column"
+            )
+
+
 def test_no_duplicate_curated_ids():
     ids = curated.list_ids()
     assert len(ids) == len(set(ids)), f"duplicate IDs in curated registry: {ids}"

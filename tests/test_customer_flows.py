@@ -185,7 +185,7 @@ async def test_flow_response_envelope_invariants():
     )
     assert data.dataset_id
     assert data.dataset_name
-    assert data.source == "Australian Taxation Office"
+    assert data.source == "Australian Taxation Office (ATO) + ACNC, via data.gov.au"
     assert data.attribution
     assert data.retrieved_at  # datetime
     assert data.ato_url.startswith("https://data.gov.au/")

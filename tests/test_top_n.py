@@ -111,7 +111,7 @@ async def test_top_n_envelope_preserved(mocked_client):
     through unchanged."""
     r = await server.top_n("CORP_TRANSPARENCY", "tax_payable", n=3)
     assert r.unit == "AUD"
-    assert r.source == "Australian Taxation Office"
+    assert r.source == "Australian Taxation Office (ATO) + ACNC, via data.gov.au"
     assert "Creative Commons" in r.attribution
     assert r.ato_url.startswith("https://data.gov.au/")
 

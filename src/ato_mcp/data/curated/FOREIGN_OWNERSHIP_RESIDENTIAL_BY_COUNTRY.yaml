@@ -45,6 +45,10 @@ metric_label_column: "Country"
 # (no.)"). Extract the 4-digit year so the period field stays on the
 # portfolio YYYY convention instead of leaking the raw header.
 period_extract: '(\d{4})'
+# No unit_column in the source — every value is a count of registered
+# residential property interests ("(no.)" in the source headers). Declare
+# the native unit so the transposed shaper never emits a null Observation.unit.
+default_unit: Registered interests
 search_keywords:
   - foreign ownership residential
   - foreign property

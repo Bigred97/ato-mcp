@@ -90,6 +90,29 @@ def test_smsf_latest_returns_newest_year(smsf_annual_overview_xlsx):
     assert rec.value > 640_000  # ~653k
 
 
+def test_smsf_records_carry_per_metric_unit(smsf_annual_overview_xlsx):
+    """Unit contract (../CLAUDE.md): SMSF_FUNDS declares no unit_column and its
+    metrics have different native units. Every Observation must carry a
+    non-null unit, sourced from the YAML metric_units mapping."""
+    cd = curated.get("SMSF_FUNDS")
+    assert cd.metric_units == {
+        "total_smsfs": "Funds",
+        "total_members": "Persons",
+        "total_gross_assets_millions": "$m",
+    }
+    df = _parse(cd, smsf_annual_overview_xlsx)
+    resp = shaping.build_response(
+        cd=cd, df=df, filters={}, measures=None,
+        start_period=None, end_period=None, fmt="records", user_query={},
+    )
+    assert resp.records
+    assert all(r.unit is not None for r in resp.records)
+    units_by_measure = {(r.measure, r.unit) for r in resp.records}
+    assert ("total_smsfs", "Funds") in units_by_measure
+    assert ("total_members", "Persons") in units_by_measure
+    assert ("total_gross_assets_millions", "$m") in units_by_measure
+
+
 def test_smsf_total_gross_assets_is_trillion_dollar_sector(smsf_annual_overview_xlsx):
     """Sanity: the SMSF sector holds ~$1T in assets as of 2023-24."""
     cd = curated.get("SMSF_FUNDS")

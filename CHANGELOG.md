@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.28] — 2026-06-09
+
+### Fixed — unit contract on the transposed shaping path
+
+- The transposed shaper (`shape_transposed`) read `Observation.unit` solely from
+  the source `unit_column` cell, which yields `None` on a blank row and was
+  absent entirely for `SMSF_FUNDS` and `FOREIGN_OWNERSHIP_RESIDENTIAL_BY_COUNTRY`
+  (no `unit_column`) — violating the portfolio unit contract (every numeric
+  value carries a non-null native-scale `unit`). The transposed path now
+  guarantees a non-null unit via a fallback chain: source cell → per-metric
+  `metric_units` → unit-column/label-column declared `unit` → dataset
+  `default_unit` → last-resort `"Unknown"`. No value conversion; native scale
+  preserved. Added `metric_units` / `default_unit` curated-YAML fields; declared
+  units for SMSF_FUNDS (Funds/Persons/$m), FOREIGN_OWNERSHIP_RESIDENTIAL
+  (Registered interests), and GST_MONTHLY ($m fallback).
+
+### Changed
+
+- `DataResponse.source` default normalised from `"Australian Taxation Office"`
+  to `"Australian Taxation Office (ATO) + ACNC, via data.gov.au"` to match the
+  documented trust contract.
+
 ## [0.8.27] — 2026-05-21
 
 ### Changed — enforce ASCENDING record ordering (portfolio convention)
