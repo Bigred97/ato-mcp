@@ -147,6 +147,8 @@ Data sourced from the Australian Taxation Office and the Australian Charities an
 
 ## Sister MCPs (Australian Public Data portfolio)
 
+> **Want all 9 sources behind one REST API?** The hosted gateway at **[ausdata.io](https://ausdata.io)** adds cross-source joins, full history, webhooks, and HMAC-signed responses on top of these MCPs — free tier (500 calls/mo, no card).
+
 - [abs-mcp](https://pypi.org/project/abs-mcp/) — Australian Bureau of Statistics (CPI, unemployment, ERP, building approvals)
 - [rba-mcp](https://pypi.org/project/rba-mcp/) — Reserve Bank of Australia (cash rate, lending stats, exchange rates)
 - **ato-mcp** — this one. Tax, super, and charity registers.
