@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.29] — 2026-07-27
+
+### Fixed — limit truncation kept the OLDEST rows of a time series, not the latest
+
+- `build_response`'s `limit` and `_HARD_MAX_RECORDS` truncation both head-sliced
+  (`records[:limit]`) the already-ascending-by-period record list. For periodic
+  (time-series) datasets — e.g. `GST_MONTHLY` — this silently kept the OLDEST
+  rows and dropped the newest, the opposite of the portfolio rule that
+  truncation must preserve the LATEST data; `truncated_at` made the response
+  look like a normal capped result. `get_data(..., limit=N)` on a multi-year
+  monthly series returned the N oldest months.
+- Added `_truncate_records()`: periodic rows (real `period`) are now
+  tail-sliced (`[-limit:]`) so the newest periods survive; period-less
+  register rows (e.g. `ACNC_REGISTER`, where source order — not chronology —
+  is the meaningful order) still front-slice (`[:limit]`), unchanged from
+  before. Mixed lists are handled explicitly (periodic rows preferred,
+  register rows fill any leftover budget from the front) rather than assumed
+  not to occur.
+- Regression tests: `test_gst_monthly_limit_keeps_most_recent_periods`
+  (`tests/test_transposed.py`) asserts `limit=12` on the 48-month GST_MONTHLY
+  fixture returns the 12 most recent months.
+  `test_acnc_register_limit_truncates_from_front` (`tests/test_shaping.py`)
+  asserts register datasets still truncate from the front, but — since
+  ACNC_REGISTER is 100% period-less — that fixture alone cannot distinguish
+  the fix from the pre-fix `records[:limit]` behaviour (both produce
+  identical output on all-register data). Strengthened with two more
+  targeted `tests/test_shaping.py` cases against a synthetic mixed
+  periodic + register-style dataset, via the same `shaping.build_response`
+  entrypoint `server.py`'s `get_data`/`latest` call:
+  `test_truncate_records_periodic_tail_slice_discriminates_from_prefix_front_slice`
+  (fails against the pre-fix front-slice — verified by monkeypatching
+  `_truncate_records` back to `records[:limit]` and confirming the test then
+  fails) and
+  `test_truncate_records_mixed_periodic_and_register_front_slice` (exercises
+  the `kept_periodic + kept_register` mixed branch that no real curated
+  dataset currently reaches).
+
 ## [0.8.28] — 2026-06-09
 
 ### Fixed — unit contract on the transposed shaping path

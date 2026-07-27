@@ -42,6 +42,42 @@ from .models import DataResponse, Observation
 _HARD_MAX_RECORDS = 100_000
 
 
+def _truncate_records(records: list[Observation], cap: int) -> list[Observation]:
+    """Truncate `records` to `cap` items, keeping the most RECENT data.
+
+    Called on records already sorted ascending by period with period-less
+    rows stable-sorted after all periodic rows (see the `records.sort(...)`
+    call in `build_response`, above where this helper is invoked).
+
+    - Time-series datasets (records carry a real `period`, e.g.
+      GST_MONTHLY): tail-slice (`[-cap:]`). Truncation must keep the LATEST
+      periods, not the oldest — that's the portfolio convention, and it's
+      what `truncated_at` implies to callers.
+    - Register datasets (period-less rows, e.g. ACNC_REGISTER): there is no
+      chronological "latest"; source order is the meaningful order, so we
+      keep head-slicing (`[:cap]`) exactly as before.
+    - Mixed lists (some records periodic, some not — not known to occur in
+      current curated datasets, but handled explicitly rather than assumed
+      away): periodic rows are tail-sliced first so the newest periods are
+      never dropped, then any leftover budget is filled from the front of
+      the period-less segment. A blanket `records[-cap:]` would instead
+      silently reverse register-dataset truncation to keep the tail, which
+      is the wrong direction for source-ordered data.
+    """
+    periodic = [r for r in records if r.period is not None]
+    registerish = [r for r in records if r.period is None]
+
+    if not periodic:
+        return registerish[:cap]
+    if not registerish:
+        return periodic[-cap:]
+
+    kept_periodic = periodic[-cap:]
+    remaining = cap - len(kept_periodic)
+    kept_register = registerish[:remaining] if remaining > 0 else []
+    return kept_periodic + kept_register
+
+
 def _safe_value(v: Any) -> float | None:
     if v is None:
         return None
@@ -723,7 +759,24 @@ def build_response(
     if last_n is not None and last_n > 0:
         shape_cap: int | None = _HARD_MAX_RECORDS + 1
     elif limit is not None and limit > 0:
-        shape_cap = min(limit + 1, _HARD_MAX_RECORDS + 1)
+        if cd.layout == "transposed":
+            # Transposed (periodic) datasets emit one Observation per
+            # period column, in ascending source-column order (oldest
+            # first). Short-circuiting emission at `limit + 1` here would
+            # stop after materialising only the OLDEST `limit + 1`
+            # periods — the latest-preserving tail-slice in
+            # `_truncate_records` below runs AFTER shaping, so it can only
+            # keep what already got materialised. That's exactly the
+            # truncation-direction bug (../CLAUDE.md): a naive emit-time
+            # cap here would silently reintroduce it even with the
+            # tail-slice fix in place. These datasets are small (periods,
+            # not entities — GST_MONTHLY is 10 metrics x tens of months),
+            # so materialising up to the hard ceiling is cheap and safe;
+            # the customer's `limit` is still honoured by the post-hoc
+            # `_truncate_records` call.
+            shape_cap = _HARD_MAX_RECORDS + 1
+        else:
+            shape_cap = min(limit + 1, _HARD_MAX_RECORDS + 1)
     else:
         shape_cap = _HARD_MAX_RECORDS + 1
 
@@ -818,12 +871,20 @@ def build_response(
     # the customer-facing soft cap. The hard ceiling below catches the
     # case where the customer didn't pass `limit` and the dataset is
     # pathologically large.
+    #
+    # Both caps must keep the LATEST data for time-series datasets
+    # (portfolio rule: truncation keeps latest, not oldest) while still
+    # keeping the FRONT of period-less register datasets (e.g.
+    # ACNC_REGISTER), where source order - not chronology - is the
+    # meaningful order. `_truncate_records` below makes that split
+    # explicit rather than blanket-flipping to `records[-limit:]`, which
+    # would silently change register truncation behaviour too.
     if limit is not None and limit > 0 and original_count > limit:
         truncated_at = original_count
-        records = records[:limit]
+        records = _truncate_records(records, limit)
     elif original_count > _HARD_MAX_RECORDS:
         truncated_at = original_count
-        records = records[:_HARD_MAX_RECORDS]
+        records = _truncate_records(records, _HARD_MAX_RECORDS)
 
     if fmt == "csv":
         out_records: list[Observation] | list[dict[str, Any]] = []

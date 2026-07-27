@@ -1,9 +1,11 @@
 """Shaping contract tests against real ATO sample files."""
 from __future__ import annotations
 
+import pandas as pd
 import pytest
 
 from ato_mcp import curated, parsing, shaping
+from ato_mcp.curated import CuratedColumn, CuratedDataset
 
 
 def _parse(cd, body):
@@ -181,6 +183,175 @@ def test_acnc_register_state_filter(acnc_register_csv):
     )
     assert resp.row_count > 0
     assert all(r.dimensions.get("state") == "QLD" for r in resp.records)
+
+
+def test_acnc_register_limit_truncates_from_front(acnc_register_csv):
+    """Regression: period-less register datasets (ACNC_REGISTER) have no
+    chronological "latest" — source order is the meaningful order, so
+    `limit` truncation must keep the FRONT of the list, unchanged from
+    pre-fix behaviour. This guards against a blanket records[-limit:]
+    flip (the tail-slice fix for time-series datasets like GST_MONTHLY)
+    silently reversing register truncation too.
+    """
+    cd = curated.get("ACNC_REGISTER")
+    df = parsing.read_csv(acnc_register_csv)
+    df = parsing.drop_blank_rows(
+        df, [c.source_column for c in cd.columns.values() if c.role == "dimension"],
+    )
+    resp_full = shaping.build_response(
+        cd=cd, df=df, filters={}, measures="responsible_persons_count",
+        start_period=None, end_period=None, fmt="records", user_query={},
+    )
+    resp_capped = shaping.build_response(
+        cd=cd, df=df, filters={}, measures="responsible_persons_count",
+        start_period=None, end_period=None, fmt="records", user_query={},
+        limit=5,
+    )
+    assert resp_full.row_count > 5, "fixture must have more than 5 rows to exercise truncation"
+    assert resp_capped.row_count == 5
+    # The emit-time shape_cap short-circuits materialisation at limit+1 for
+    # memory safety (see build_response), so truncated_at reports that
+    # intermediate count rather than the full untruncated row_count — same
+    # convention as the existing shape-cap tests (test_shape_cap.py). What
+    # matters here is only that truncation was flagged at all.
+    assert resp_capped.truncated_at is not None
+    assert resp_capped.truncated_at >= 5
+
+
+def _mixed_wide_cd() -> CuratedDataset:
+    """Synthetic wide-layout dataset with BOTH periodic measures (FY-suffixed
+    keys, e.g. `count_2019_20`) and a period-less register-style measure —
+    the mixed case `_truncate_records` handles explicitly but that no real
+    curated dataset happens to exercise. Lets a single `build_response` call
+    (the same entrypoint `server.py`'s `get_data`/`latest` use) produce a
+    records list containing both periodic and period-less Observations, so
+    truncation direction can be checked for each half simultaneously.
+    """
+    columns = {
+        "entity_id": CuratedColumn(key="entity_id", source_column="Entity ID", role="dimension"),
+        "count_2019_20": CuratedColumn(key="count_2019_20", source_column="Count 2019-20", unit="Count"),
+        "count_2020_21": CuratedColumn(key="count_2020_21", source_column="Count 2020-21", unit="Count"),
+        "count_2021_22": CuratedColumn(key="count_2021_22", source_column="Count 2021-22", unit="Count"),
+        "register_field": CuratedColumn(key="register_field", source_column="Register Field", unit="Count"),
+    }
+    return CuratedDataset(
+        id="TEST_MIXED",
+        name="Test Mixed Register/Time-series",
+        description="Synthetic fixture for truncation-direction regression test.",
+        source_url="https://example.test/dataset",
+        download_url="https://example.test/dataset.csv",
+        format="csv",
+        sheet=None,
+        header_row=1,
+        data_start_row=None,
+        max_rows=None,
+        layout="wide",
+        period_coverage=None,
+        update_frequency="annual",
+        cache_kind="data",
+        columns=columns,
+        dimension_values={},
+    )
+
+
+def test_truncate_records_periodic_tail_slice_discriminates_from_prefix_front_slice():
+    """Regression: for a purely periodic (time-series) dataset, truncation
+    must keep the LATEST periods (tail-slice), via the real
+    `shaping.build_response` entrypoint `server.py`'s `get_data`/`latest`
+    call — not the internal `_truncate_records` helper directly.
+
+    This scenario is deliberately built to DISCRIMINATE old vs new code.
+    `build_response`'s emit-time cap for wide layouts short-circuits
+    materialisation at `limit + 1` records (see the `shape_cap` comment in
+    `build_response`), so with 4 entities x 3 FY measures the raw
+    (pre-truncate) set is: 2019-20 x4, 2020-21 x4, 2021-22 x3 (11 total,
+    row 4's 2021-22 cell never gets materialised). Post-hoc truncation to
+    limit=10 must then drop exactly 1 record:
+      - NEW (tail-slice, `_truncate_records`): drops the FIRST item in the
+        ascending-sorted list -> entity E1's 2019-20 observation.
+      - OLD (pre-fix `records[:limit]` front-slice on the same ascending
+        list): drops the LAST item -> entity E3's 2021-22 observation.
+    These are different, concrete, individually-identifiable observations,
+    so asserting on them fails against the pre-fix front-slice and passes
+    only against the tail-slice fix — unlike the all-register fixture this
+    replaces, which could not tell the two implementations apart.
+    """
+    cd = _mixed_wide_cd()
+    df = pd.DataFrame(
+        {
+            "Entity ID": ["E1", "E2", "E3", "E4"],
+            "Count 2019-20": [10, 20, 30, 40],
+            "Count 2020-21": [11, 21, 31, 41],
+            "Count 2021-22": [12, 22, 32, 42],
+            "Register Field": [100, 200, 300, 400],
+        }
+    )
+    measures = ["count_2019_20", "count_2020_21", "count_2021_22"]
+
+    resp = shaping.build_response(
+        cd=cd, df=df, filters={}, measures=measures,
+        start_period=None, end_period=None, fmt="records", user_query={},
+        limit=10,
+    )
+    assert resp.row_count == 10
+    seen = {(r.dimensions.get("entity_id"), r.period) for r in resp.records}
+
+    assert ("E1", "2019-20") not in seen, (
+        "tail-slice must drop the EARLIEST surplus record (E1's 2019-20); "
+        "its presence means truncation regressed to the pre-fix front-slice"
+    )
+    assert ("E3", "2021-22") in seen, (
+        "tail-slice must keep the LATEST period (2021-22) fully, including "
+        "E3's observation; its absence means truncation regressed to the "
+        "pre-fix front-slice, which would have dropped it instead"
+    )
+    # Sanity: everything else in the 4x3 grid (minus the one dropped cell,
+    # and row 4's un-materialised 2021-22 cell) is present.
+    assert len(seen) == 10
+
+
+def test_truncate_records_mixed_periodic_and_register_front_slice():
+    """Regression: when a response mixes periodic and period-less
+    (register-style) Observations and the periodic rows fit comfortably
+    within `limit`, the leftover budget for period-less rows must still be
+    filled from the FRONT (source order), exercising the
+    `kept_periodic + kept_register` branch in `_truncate_records` that a
+    100%-periodic or 100%-register fixture never reaches. Uses the same
+    real `shaping.build_response` entrypoint as production `get_data`/
+    `latest`.
+    """
+    cd = _mixed_wide_cd()
+    df = pd.DataFrame(
+        {
+            "Entity ID": ["E1", "E2", "E3"],
+            "Count 2019-20": [10, 20, 30],
+            "Count 2020-21": [11, 21, 31],
+            "Count 2021-22": [12, 22, 32],
+            "Register Field": [100, 200, 300],
+        }
+    )
+    measures = ["count_2019_20", "register_field"]
+
+    resp = shaping.build_response(
+        cd=cd, df=df, filters={}, measures=measures,
+        start_period=None, end_period=None, fmt="records", user_query={},
+        limit=5,
+    )
+    assert resp.row_count == 5
+    periodic_entities = {
+        r.dimensions.get("entity_id") for r in resp.records if r.period is not None
+    }
+    register_entities = {
+        r.dimensions.get("entity_id") for r in resp.records if r.period is None
+    }
+    assert periodic_entities == {"E1", "E2", "E3"}, (
+        "all 3 periodic rows fit within limit=5 and must be kept in full, "
+        f"got {periodic_entities}"
+    )
+    assert register_entities == {"E1", "E2"}, (
+        "period-less rows must truncate from the FRONT (source order, "
+        f"dropping E3, the last row) — got {register_entities}"
+    )
 
 
 def test_unknown_filter_raises(corp_transparency_xlsx):

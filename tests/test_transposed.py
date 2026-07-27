@@ -102,6 +102,51 @@ def test_gst_monthly_records_ascending_by_period(gst_monthly_xlsx):
     assert periods[-1] == max(periods), "records[-1] must be the most recent month"
 
 
+def test_gst_monthly_limit_keeps_most_recent_periods(gst_monthly_xlsx):
+    """Regression (../CLAUDE.md truncation-direction rule): get_data(limit=N)
+    on a time-series dataset must return the N MOST RECENT periods, not the
+    N oldest. Records are sorted ascending by period, so a naive
+    `records[:limit]` head-slice silently drops the newest data while
+    `truncated_at` makes the response look like a normal capped result —
+    this is exactly the GST_MONTHLY-shaped bug being regression-tested.
+    """
+    cd = curated.get("GST_MONTHLY")
+    df = _parse(cd, gst_monthly_xlsx)
+    resp_full = shaping.build_response(
+        cd=cd, df=df, filters={}, measures="net_gst",
+        start_period=None, end_period=None, fmt="records", user_query={},
+    )
+    assert resp_full.row_count == 48  # full 48-month series
+
+    resp_capped = shaping.build_response(
+        cd=cd, df=df, filters={}, measures="net_gst",
+        start_period=None, end_period=None, fmt="records", user_query={},
+        limit=12,
+    )
+    assert resp_capped.row_count == 12
+    assert resp_capped.truncated_at == 48
+
+    full_periods = [r.period for r in resp_full.records]
+    capped_periods = [r.period for r in resp_capped.records]
+    expected_latest_12 = full_periods[-12:]
+
+    # The capped response must contain the LATEST 12 months, still
+    # ascending, ending on the same most-recent month as the full series.
+    assert capped_periods == expected_latest_12, (
+        f"limit=12 must keep the most recent periods; got {capped_periods} "
+        f"but expected the tail {expected_latest_12} of {full_periods}"
+    )
+    assert capped_periods == sorted(capped_periods), "capped records must stay ascending"
+    assert capped_periods[-1] == full_periods[-1] == max(full_periods), (
+        "the most recent month must survive truncation"
+    )
+    # The old (buggy) behaviour would have kept the OLDEST 12 months instead.
+    assert capped_periods != full_periods[:12], (
+        "limit truncation kept the OLDEST periods, not the latest — "
+        "this is the exact regression this test guards against"
+    )
+
+
 def test_gst_monthly_single_measure_filter(gst_monthly_xlsx):
     cd = curated.get("GST_MONTHLY")
     df = _parse(cd, gst_monthly_xlsx)
