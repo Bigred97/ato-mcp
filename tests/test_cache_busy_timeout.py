@@ -37,7 +37,7 @@ from pathlib import Path
 import pytest
 
 from ato_mcp import cache as cache_module
-from ato_mcp.cache import Cache, _BUSY_TIMEOUT_MS
+from ato_mcp.cache import _BUSY_TIMEOUT_MS, Cache
 
 
 @pytest.fixture
