@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.30] — 2026-07-27
+
+### Fixed — `filters` rejected a JSON-encoded string over real MCP transport
+
+- `filters: Annotated[dict[str, Any] | None, ...]` on `get_data`, `latest`,
+  `top_n`, and `stats` declared a strict dict-only Pydantic schema. FastMCP
+  validates incoming tool arguments against that schema *before* the function
+  body runs, so any MCP client sending `filters` as a JSON-encoded string
+  (the natural encoding for a structured argument over JSON-RPC) was rejected
+  with a raw Pydantic `dict_type` error — never reaching `server.py`'s own
+  `_validate_filters`, which already `json.loads()`s a string correctly with
+  its own "invalid JSON string" hint. That helper was dead code for any
+  client sending `filters` as text. Confirmed live via real MCP tool calls
+  against the sibling `abs-mcp` server (`get_data`, `latest`, `top_n`), and
+  reproduced here by grep for the identical
+  `filters: Annotated[dict[str, Any] | None,` pattern.
+- Widened the type on all four affected parameters to
+  `dict[str, Any] | str | None` (description/examples unchanged) so a string
+  argument reaches the function body, where `_validate_filters` — already
+  called unconditionally as the first thing done with `filters` inside
+  `_get_data_impl` (shared by `get_data`/`latest`/`top_n`/`stats`) — does the
+  real parsing. No other call-site changes were needed; the lenient-parsing
+  path already existed and was already wired correctly, only unreachable.
+- New `tests/test_mcp_protocol.py`: round-trips arguments through a real
+  `fastmcp.Client` in-process against the actual `mcp` server instance (not
+  a direct async-function call with a native Python dict, which is what the
+  rest of the suite does and exactly why this bug shipped undetected — it
+  never crosses the JSON-RPC argument-validation boundary). Asserts a
+  JSON-string `filters` argument clears MCP transport validation and reaches
+  `server.py`'s own dataset-id check on all four tools, and that a malformed
+  JSON string surfaces `_validate_filters`'s own hint rather than a Pydantic
+  schema error. Verified failing against the pre-fix `dict[str, Any] | None`
+  type (raw `dict_type` validation error) and passing after the widen.
+
 ## [0.8.29] — 2026-07-27
 
 ### Fixed — limit truncation kept the OLDEST rows of a time series, not the latest
