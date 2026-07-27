@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.31] — 2026-07-27
+
+### Fixed — `ACNC_REGISTER` intermittent `sqlite3.OperationalError` under concurrent cache writes
+
+- Live via the gateway: `GET /v1/data/ato/ACNC_REGISTER` returned HTTP 502
+  ("Upstream error from 'ato': OperationalError") despite `ACNC_REGISTER`
+  already sitting in the gateway's `_SLOW_DATASETS` map with a 45s timeout
+  ceiling (added 0.7.97) — ruling out "needs more time" as the cause.
+- Root cause: `cache.py`'s `Cache` opened every `aiosqlite` connection with
+  the library default 5s busy-timeout. `server.py` deliberately keeps a
+  **thread-local** `ATOClient`/`Cache` per worker thread (module docstring:
+  gateways invoke sisters from worker threads with fresh asyncio loops per
+  call), so the in-process `_in_flight` de-dupe in `client.py` only covers
+  one thread — it does **not** de-dupe concurrent gateway worker threads
+  racing the same cold/expired cache key. `ACNC_REGISTER` is a ~50MB
+  streamed CSV, so multiple threads writing it to the same `cache.db` at
+  once serialize on SQLite's single-writer lock; under load that queue can
+  exceed the 5s default, raising a bare `sqlite3.OperationalError`
+  (`"database is locked"` / `"disk I/O error"`). The existing
+  self-heal-on-corruption logic already caught `sqlite3.DatabaseError`
+  broadly enough (`OperationalError` is a subclass) on the *first* attempt
+  in `get`/`get_stale`/`set`, but `set`'s corruption-retry path had no
+  further protection and could hit the same contention error again, at
+  which point it propagated uncaught up through `client.py` and `server.py`
+  to the gateway as the raw `OperationalError`.
+- Reproduced locally (outside the repo, read-only): 24 concurrent OS
+  processes each writing a 58MB payload to the *same* cache key against an
+  unmodified `Cache` instance — 3 of 4 runs raised `sqlite3.OperationalError`
+  in 1–10 of the 24 writers (non-deterministic, matching the live symptom's
+  intermittency). The same repro against a copy of `cache.py` with a raised
+  busy-timeout on every connection: 0 errors across 4 runs of 24 writers
+  each.
+- Fix: added `Cache._connect()` — `aiosqlite.connect(self.db_path, timeout=30.0)`
+  — and routed every connection in `_init_schema`/`get`/`get_stale`/`set`/
+  `clear` through it instead of raw `aiosqlite.connect(self.db_path)`. 30s
+  busy-timeout lets concurrent writers queue for the lock instead of raising,
+  while staying comfortably inside the gateway's existing 45s ceiling for
+  this dataset.
+- New `tests/test_cache_busy_timeout.py`: asserts every `aiosqlite.connect`
+  call site in `cache.py` goes through `Cache._connect()` (regression guard
+  against a future call-site reintroducing the un-timed-out default), plus
+  a live simulation that monkeypatches `aiosqlite.connect` to a fake
+  connection whose first `execute()` call raises
+  `sqlite3.OperationalError("database is locked")` and confirms
+  `Cache.set()`'s corruption-retry path is exercised and a `timeout=` kwarg
+  matching `_BUSY_TIMEOUT_MS` was passed on every connect call.
+
 ## [0.8.30] — 2026-07-27
 
 ### Fixed — `filters` rejected a JSON-encoded string over real MCP transport

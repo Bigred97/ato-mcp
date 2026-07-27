@@ -38,6 +38,24 @@ CREATE TABLE IF NOT EXISTS http_cache (
 CREATE INDEX IF NOT EXISTS idx_kind_cached_at ON http_cache(kind, cached_at);
 """
 
+# aiosqlite/sqlite3 default to a 5s busy-timeout before raising
+# "database is locked" (sqlite3.OperationalError). That's too short for
+# ACNC_REGISTER: it's a ~50MB payload, and the gateway fans requests out
+# across worker threads, each with its own thread-local ATOClient/Cache
+# (see server.py's `_thread_local` — the in-process `_in_flight` dedup
+# only covers one thread, not concurrent threads racing the same cold/
+# expired cache key). Multiple threads writing a ~50MB blob to the same
+# cache.db at once serialize on SQLite's single-writer lock; under load
+# that queue can exceed 5s, and — reproduced locally with 24 concurrent
+# writers of a 58MB payload to the same key — raises a bare
+# sqlite3.OperationalError ("database is locked" / "disk I/O error")
+# that the existing self-heal-on-corruption retry does not fully absorb
+# (the retry itself has no further protection and can hit the same
+# error, at which point it propagates uncaught). Raising busy_timeout
+# lets writers queue instead of erroring; 30s stays comfortably inside
+# the gateway's 45s ceiling for this dataset (added 0.7.97).
+_BUSY_TIMEOUT_MS = 30_000
+
 
 class Cache:
     def __init__(self, db_path: Path = DEFAULT_DB_PATH) -> None:
@@ -60,8 +78,16 @@ class Cache:
                 await self._init_schema()
             self._initialized = True
 
+    def _connect(self):
+        """Like calling aiosqlite's connect directly, but with a busy-timeout
+        raised above the 5s default so concurrent writers queue instead of
+        raising sqlite3.OperationalError under lock contention (see
+        `_BUSY_TIMEOUT_MS` above). Every connection in this class must go
+        through this helper, never a raw connect call."""
+        return aiosqlite.connect(self.db_path, timeout=_BUSY_TIMEOUT_MS / 1000)
+
     async def _init_schema(self) -> None:
-        async with aiosqlite.connect(self.db_path) as conn:
+        async with self._connect() as conn:
             await conn.execute("PRAGMA journal_mode=WAL")
             await conn.executescript(_SCHEMA)
             await conn.commit()
@@ -79,7 +105,7 @@ class Cache:
         await self._ensure_init()
         cutoff = time.time() - ttl.total_seconds()
         try:
-            async with aiosqlite.connect(self.db_path) as conn:
+            async with self._connect() as conn:
                 async with conn.execute(
                     "SELECT payload FROM http_cache WHERE cache_key = ? AND cached_at >= ?",
                     (key, cutoff),
@@ -103,7 +129,7 @@ class Cache:
         """
         await self._ensure_init()
         try:
-            async with aiosqlite.connect(self.db_path) as conn:
+            async with self._connect() as conn:
                 async with conn.execute(
                     "SELECT payload, cached_at FROM http_cache WHERE cache_key = ?",
                     (key,),
@@ -119,7 +145,7 @@ class Cache:
     async def set(self, key: str, value: bytes, kind: CacheKind) -> None:
         await self._ensure_init()
         try:
-            async with aiosqlite.connect(self.db_path) as conn:
+            async with self._connect() as conn:
                 await conn.execute(
                     """
                     INSERT INTO http_cache (cache_key, payload, cached_at, kind)
@@ -137,7 +163,7 @@ class Cache:
             # also fails, the disk is genuinely broken and we propagate.
             await self._reset_for_corruption()
             await self._ensure_init()
-            async with aiosqlite.connect(self.db_path) as conn:
+            async with self._connect() as conn:
                 await conn.execute(
                     """
                     INSERT INTO http_cache (cache_key, payload, cached_at, kind)
@@ -149,7 +175,7 @@ class Cache:
 
     async def clear(self, kind: CacheKind | None = None) -> None:
         await self._ensure_init()
-        async with aiosqlite.connect(self.db_path) as conn:
+        async with self._connect() as conn:
             if kind:
                 await conn.execute("DELETE FROM http_cache WHERE kind = ?", (kind,))
             else:
