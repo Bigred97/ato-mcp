@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.8.32 (2026-08-16) — 2023-24 income vintage + honest mixed-unit envelope
+
+### Fixed
+
+- **`IND_POSTCODE_MEDIAN` now serves the 2023-24 taxstats vintage.** Discovery
+  was already fetching the current `taxation-statistics-2023-24` file; the
+  curated column schema stopped at the `_2022_23` suffix, so the newest year in
+  the file was silently dropped. Added the three 2023-24 measure columns
+  (matched 1:1 against the live file, 2324/2324 postcode rows), refreshed the
+  edition metadata/URLs, and corrected the description's coverage claim.
+- **`DataResponse.unit` no longer collapses to null on genuinely mixed-unit
+  queries** (e.g. unfiltered `SMSF_FUNDS` spans Funds/Persons/$m): the envelope
+  now reports `"Mixed"`. Per-record units were always correct and are unchanged.
+- **MCP handshake `serverInfo.version` now reports the real package version.**
+- Test mocks for company/occupation/super-contributions moved to the `ts24`
+  edition URLs their discovery now resolves.
+
+### Known and deferred (honesty note)
+
+- **`IND_AGE_INCOME` currently fails live**: ATO renamed a source column
+  ("Taxable income range - tax brackets5" → "…tax brackets") between editions,
+  and the wide-layout schema check correctly refuses a partial mapping. Fix
+  (schema + regenerated fixture) is staged for the next release.
+
 ## [0.8.31] — 2026-07-27
 
 ### Fixed — `ACNC_REGISTER` intermittent `sqlite3.OperationalError` under concurrent cache writes

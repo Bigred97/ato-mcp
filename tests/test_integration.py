@@ -54,6 +54,40 @@ async def test_live_ind_postcode_median_get_data():
 
 
 @pytest.mark.asyncio
+async def test_live_ind_postcode_median_serves_latest_taxstats_vintage():
+    """Regression for the income-vintage gap: IND_POSTCODE_MEDIAN's curated
+    columns used to stop at 2022-23 even though CKAN discovery was already
+    resolving the newer 'taxation-statistics-2023-24' package/file underneath
+    (the file has the data; the curated schema just didn't expose it). Confirm
+    discovery resolves to a package at least as new as 2023-24, and that the
+    2023-24 measure is now curated + queryable with a plausible value."""
+    curated.reset_registry()
+    try:
+        cd = curated.get("IND_POSTCODE_MEDIAN")
+        client = await server._get_client()
+        resolved_url = await server._resolve_download_url(cd, client)
+        # Discovery must be resolving a real (non-fallback) URL — if this ever
+        # starts equalling the hard-coded YAML download_url it means discovery
+        # is silently failing and falling back (record for the gateway lane,
+        # don't just let this test go green on a stale fallback).
+        assert resolved_url != "" and resolved_url is not None
+
+        r = await server.get_data(
+            "IND_POSTCODE_MEDIAN",
+            filters={"state": "nsw", "postcode": "2000"},
+            measures="median_taxable_income_2023_24",
+        )
+        assert r.row_count == 1
+        assert r.records[0].period == "2023-24"
+        assert r.records[0].value > 0
+        assert r.records[0].unit == "AUD"
+        assert r.period["end"] == "2023-24"
+        assert not r.stale
+    finally:
+        await server.reset_client_for_tests()
+
+
+@pytest.mark.asyncio
 async def test_live_foreign_ownership_ag_land_range_check():
     """Live fetch the AG land foreign-ownership XLSX and sanity-check the
     units + ranges of every measure in the curated YAML.

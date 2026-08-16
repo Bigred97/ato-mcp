@@ -1,0 +1,22 @@
+# code-only corpus (no LLM, fully offline) — exclude docs/papers/images
+*.md
+*.mdx
+*.qmd
+*.txt
+*.rst
+*.html
+*.yaml
+*.yml
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+# graphify output + build artifacts (regenerable, large)
+graphify-out/
+dist/
+build/
+*.egg-info/
+node_modules/

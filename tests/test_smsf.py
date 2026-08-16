@@ -113,6 +113,36 @@ def test_smsf_records_carry_per_metric_unit(smsf_annual_overview_xlsx):
     assert ("total_gross_assets_millions", "$m") in units_by_measure
 
 
+def test_smsf_response_unit_is_mixed_not_null(smsf_annual_overview_xlsx):
+    """SMSF_FUNDS genuinely mixes three different native units across its
+    three metrics (Funds / Persons / $m — see test_smsf_records_carry_per_metric_unit,
+    which already confirms every individual Observation carries the correct
+    non-null unit). The response-ENVELOPE `DataResponse.unit` summary field
+    is a different thing: `build_response` only fills it in when every
+    returned record shares exactly one unit, so an unfiltered (all-measures)
+    SMSF_FUNDS query left it silently `None` even though real per-record
+    unit data was present underneath — this is what a caller skimming just
+    the top-level envelope would see and reasonably report as 'unit: null'.
+    It must instead surface an honest, non-invented 'Mixed' sentinel
+    whenever the returned records span more than one distinct unit."""
+    cd = curated.get("SMSF_FUNDS")
+    df = _parse(cd, smsf_annual_overview_xlsx)
+    resp = shaping.build_response(
+        cd=cd, df=df, filters={}, measures=None,
+        start_period=None, end_period=None, fmt="records", user_query={},
+    )
+    assert resp.row_count > 0
+    assert resp.unit == "Mixed"
+
+    # Narrowing to a single measure keeps the pre-existing behaviour: the
+    # one shared unit surfaces directly at the envelope level too.
+    resp_single = shaping.build_response(
+        cd=cd, df=df, filters={}, measures="total_smsfs",
+        start_period=None, end_period=None, fmt="records", user_query={},
+    )
+    assert resp_single.unit == "Funds"
+
+
 def test_smsf_total_gross_assets_is_trillion_dollar_sector(smsf_annual_overview_xlsx):
     """Sanity: the SMSF sector holds ~$1T in assets as of 2023-24."""
     cd = curated.get("SMSF_FUNDS")

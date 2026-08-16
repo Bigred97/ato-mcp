@@ -137,6 +137,61 @@ def test_postcode_median_series_format(ind_postcode_median_xlsx):
         assert len(g["observations"]) == 1
 
 
+def test_postcode_median_2023_24_vintage_is_curated(ind_postcode_median_xlsx):
+    """Regression for the income-vintage gap (../CLAUDE.md housing-affordability
+    composer fed 2003-04-era income): the curated schema used to stop at
+    2022-23 even though the source table (and, live, CKAN discovery) already
+    carried a newer year. 2023-24 must now be a first-class queryable measure,
+    trailing the same three-column-per-year pattern as every prior vintage."""
+    cd = curated.get("IND_POSTCODE_MEDIAN")
+    df = _parse(cd, ind_postcode_median_xlsx)
+    resp = shaping.build_response(
+        cd=cd, df=df,
+        filters={"state": "act", "postcode": "2600"},
+        measures=[
+            "individuals_2023_24",
+            "median_taxable_income_2023_24",
+            "average_taxable_income_2023_24",
+        ],
+        start_period=None, end_period=None, fmt="records", user_query={},
+    )
+    assert resp.row_count == 3
+    by_measure = {r.measure: r.value for r in resp.records}
+    assert by_measure["individuals_2023_24"] == 6280
+    assert by_measure["median_taxable_income_2023_24"] == 92327
+    assert by_measure["average_taxable_income_2023_24"] == 136138
+    # Period is extracted from the measure-key suffix (see _period_from_measure_key)
+    assert all(r.period == "2023-24" for r in resp.records)
+    assert resp.period["end"] == "2023-24"
+    # Units still resolve correctly for the new columns.
+    med = next(r for r in resp.records if r.measure == "median_taxable_income_2023_24")
+    assert med.unit == "AUD"
+    cnt = next(r for r in resp.records if r.measure == "individuals_2023_24")
+    assert cnt.unit == "Persons"
+
+
+def test_postcode_median_2023_24_plausible_alongside_2022_23(ind_postcode_median_xlsx):
+    """Sanity: the newly-curated 2023-24 vintage is a plausible income figure
+    sitting alongside 2022-23 for the same postcode. NOT asserted to be
+    strictly higher — real postcode-level medians (unlike national
+    aggregates) can legitimately dip year-on-year on demographic churn;
+    NSW 2000 (Sydney CBD) genuinely does in this real ATO data (42,667 ->
+    40,697). Monotonic growth is instead asserted where it does hold, e.g.
+    ACT 2600 in test_postcode_median_2023_24_vintage_is_curated's sibling
+    live check and the pre-existing 2003-04 -> 2013-14 -> 2022-23 test."""
+    cd = curated.get("IND_POSTCODE_MEDIAN")
+    df = _parse(cd, ind_postcode_median_xlsx)
+    resp = shaping.build_response(
+        cd=cd, df=df,
+        filters={"state": "nsw", "postcode": "2000"},
+        measures=["median_taxable_income_2022_23", "median_taxable_income_2023_24"],
+        start_period=None, end_period=None, fmt="records", user_query={},
+    )
+    by_measure = {r.measure: r.value for r in resp.records}
+    assert by_measure["median_taxable_income_2022_23"] == 42667
+    assert 10_000 < by_measure["median_taxable_income_2023_24"] < 200_000
+
+
 def test_company_industry_filter(company_industry_xlsx):
     cd = curated.get("COMPANY_INDUSTRY")
     df = _parse(cd, company_industry_xlsx)

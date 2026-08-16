@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ato-mcp"
-version = "0.8.31"
+version = "0.8.32"
 description = "MCP server for Australian Taxation Office statistics. Plain-English access to personal tax by postcode, company tax by industry, corporate tax transparency, GST collections, super contributions, and the ACNC charity register."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,6 +20,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
@@ -54,8 +55,8 @@ dev = [
 ato-mcp = "ato_mcp.server:main"
 
 [project.urls]
-Homepage = "https://github.com/Bigred97/ato-mcp"
-Documentation = "https://github.com/Bigred97/ato-mcp#readme"
+Homepage = "https://ausdata.io"
+Documentation = "https://ausdata.io/sources/ato/"
 Repository = "https://github.com/Bigred97/ato-mcp"
 Issues = "https://github.com/Bigred97/ato-mcp/issues"
 Changelog = "https://github.com/Bigred97/ato-mcp/blob/main/CHANGELOG.md"

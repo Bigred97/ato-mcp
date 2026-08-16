@@ -231,3 +231,17 @@ def test_no_mcp_tool_refs_in_error_strings():
         "Replace with transport-agnostic hints (e.g. 'See the valid-options list "
         f"for X').\n  {chr(10).join(offenders)}"
     )
+
+
+# ---------- server construction: FastMCP version must be the package's own ----------
+#
+# Regression guard: FastMCP(name=...) without an explicit version= kwarg
+# silently defaults `.version` to fastmcp's OWN library version (e.g.
+# "3.2.4") — which then leaks into serverInfo.version at the MCP initialize
+# handshake, mismatching the server_version field every DataResponse
+# already reports via importlib.metadata.
+
+def test_mcp_server_version_matches_package_version():
+    from importlib.metadata import version as _pkg_version
+
+    assert server.mcp.version == _pkg_version("ato-mcp")

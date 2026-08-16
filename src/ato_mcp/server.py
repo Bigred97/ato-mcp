@@ -26,7 +26,7 @@ import pandas as pd
 from fastmcp import FastMCP
 from pydantic import Field
 
-from . import catalog, curated, parquet_cache
+from . import __version__, catalog, curated, parquet_cache
 from .client import ATOAPIError, ATOClient, get_stale_signal, reset_stale_signal
 from .discovery import DiscoveryError, DiscoverySpec, resolve_latest_url
 from .models import ColumnDetail, DataResponse, DatasetDetail, DatasetSummary, Observation
@@ -50,7 +50,7 @@ _DATASET_ID_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
 _PERIOD_PATTERN = re.compile(r"^[0-9-]{4,10}$")
 _VALID_FORMATS = {"records", "series", "csv"}
 
-mcp = FastMCP("ato-mcp")
+mcp = FastMCP("ato-mcp", version=__version__)
 
 # Per-thread client cache. We deliberately avoid a module-global singleton:
 # gateways like ausdata-api invoke us from worker threads with fresh asyncio

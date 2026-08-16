@@ -1,16 +1,18 @@
 id: IND_POSTCODE_MEDIAN
-name: Median & Average Taxable Income by Postcode — time series (2003-04 to 2022-23)
+name: Median & Average Taxable Income by Postcode — time series (2003-04 to 2023-24)
 description: |
   ATO Taxation Statistics Table 8 — median and average taxable income for
-  individuals by state/territory and postcode, across every income year
-  from 2003-04 to 2022-23. ~2,300 postcodes × per-year (individual count,
-  median, average). This is the "what's the median income in postcode X
-  over time?" table — the cleanest answer to that exact question.
+  individuals by state/territory and postcode, for 8 selected income years
+  (2003-04, 2013-14, then every year 2018-19 through 2023-24) drawn from the
+  source table's full continuous run back to 2003-04. ~2,300 postcodes ×
+  per-year (individual count, median, average). This is the "what's the
+  median income in postcode X over time?" table — the cleanest answer to
+  that exact question.
   Source: ATO Taxation Statistics, dataset on data.gov.au.
-period_coverage: 2003-04 to 2022-23
+period_coverage: 2003-04 to 2023-24
 update_frequency: annual
-source_url: https://data.gov.au/data/dataset/taxation-statistics-2022-23
-download_url: https://data.gov.au/data/dataset/03326c3f-c0d3-4af4-afc7-c6ccc0a02223/resource/e4b8c6b4-1185-4be6-9bd7-cf4385934d00/download/ts23individual08medianaveragetaxableincomestatepostcode.xlsx
+source_url: https://data.gov.au/data/dataset/taxation-statistics-2023-24
+download_url: https://data.gov.au/data/dataset/faea4485-f407-457d-97f8-3f0822ccd654/resource/4db4ef74-bd3e-47d0-a56e-29659f812c8a/download/ts24individual08medianaveragetaxableincomestatepostcode.xlsx
 discovery:
   organization_id: australiantaxationoffice
   package_id_pattern: '^taxation-statistics-(\d{4})-\d{2}$'
@@ -143,6 +145,21 @@ columns:
     dtype: float
   average_taxable_income_2022_23:
     source_column: "Average3 taxable income 2022–23\n$"
+    unit: AUD
+    role: measure
+    dtype: float
+  individuals_2023_24:
+    source_column: "Individuals 2023–24\nno."
+    unit: Persons
+    role: measure
+    dtype: int
+  median_taxable_income_2023_24:
+    source_column: "Median3 taxable income 2023–24\n$"
+    unit: AUD
+    role: measure
+    dtype: float
+  average_taxable_income_2023_24:
+    source_column: "Average3 taxable income 2023–24\n$"
     unit: AUD
     role: measure
     dtype: float

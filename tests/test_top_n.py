@@ -16,10 +16,10 @@ from ato_mcp.client import ATOClient
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 FIXTURE_MAP = {
-    "ts23individual08": FIXTURE_DIR / "ind_postcode_median.xlsx",
-    "ts23company04":    FIXTURE_DIR / "company_industry.xlsx",
+    "ts24individual08": FIXTURE_DIR / "ind_postcode_median.xlsx",
+    "ts24company04":    FIXTURE_DIR / "company_industry.xlsx",
     "2023-24-corporate": FIXTURE_DIR / "corp_transparency_2023_24.xlsx",
-    "ts23individual23": FIXTURE_DIR / "super_contrib_age.xlsx",
+    "ts24individual23": FIXTURE_DIR / "super_contrib_age.xlsx",
     "datadotgov_main.csv": FIXTURE_DIR / "acnc_register_head.csv",
     "gst01gstwetlctbyyearmonth": FIXTURE_DIR / "gst_monthly.xlsx",
 }

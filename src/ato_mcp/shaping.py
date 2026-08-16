@@ -840,11 +840,22 @@ def build_response(
     # FY 'YYYY-YY' / ISO date) sort lexicographically into chronological order.
     records.sort(key=lambda r: (r.period is None, r.period or ""))
 
+    # Unit contract (../CLAUDE.md): every numeric Observation carries its own
+    # non-null unit already (see shape_transposed / shape_wide). This
+    # envelope-level field is a convenience summary on top of that — but it
+    # must not silently collapse to null just because a query wasn't narrow
+    # enough to share one unit. Datasets like SMSF_FUNDS genuinely mix
+    # native units across measures (Funds / Persons / $m); an unfiltered
+    # query legitimately returns records in more than one unit, and the
+    # honest summary for that is "Mixed" — not a null that reads as "unit
+    # unknown" when every record underneath is correctly labelled.
     response_unit: str | None = None
     if records:
         units = {r.unit for r in records if r.unit}
         if len(units) == 1:
             response_unit = next(iter(units))
+        elif len(units) > 1:
+            response_unit = "Mixed"
 
     period_start = start_period
     period_end = end_period
